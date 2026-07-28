@@ -8,6 +8,7 @@
 import { createInterface } from "node:readline";
 import { type ImageContent, modelsAreEqual } from "@earendil-works/pi-ai";
 import chalk from "chalk";
+import { handleLarkCommand } from "./capabilities/lark/src/cli.ts";
 import { type Args, type Mode, parseArgs, printHelp } from "./cli/args.ts";
 import {
 	type CredentialPrintCommand,
@@ -519,6 +520,7 @@ export interface MainOptions {
 }
 
 export async function main(args: string[], options?: MainOptions) {
+	if (await handleLarkCommand(args)) return;
 	resetTimings();
 	const extensionFactories = [...builtInExtensions, ...(options?.extensionFactories ?? [])];
 	const offlineMode = args.includes("--offline") || isTruthyEnvFlag(process.env.PI_OFFLINE);

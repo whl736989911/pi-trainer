@@ -2,10 +2,13 @@
 
 Stateful agent with tool execution and event streaming. Built on `@earendil-works/pi-ai`.
 
-## Installation
+## Workspace usage
+
+This is an internal compatibility package in the Pi Trainer monorepo; Pi Trainer does not publish it as a standalone package. Install and build it from the repository root:
 
 ```bash
-npm install @earendil-works/pi-agent-core
+npm install
+npm run build
 ```
 
 ### SQLite session backends

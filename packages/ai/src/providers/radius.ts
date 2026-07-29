@@ -3,7 +3,6 @@ import { envApiKeyAuth, lazyOAuth } from "../auth/helpers.ts";
 import { loadRadiusOAuth } from "../auth/oauth/load.ts";
 import type { Provider } from "../models.ts";
 import {
-	DEFAULT_RADIUS_GATEWAY,
 	getRadiusModels,
 	getRadiusModelsFromConfig,
 	loadRadiusGatewayConfig,
@@ -20,7 +19,12 @@ export interface RadiusProviderOptions {
 export function radiusProvider(options: RadiusProviderOptions = {}): Provider<"pi-messages"> {
 	const id = options.id ?? "radius";
 	const name = options.name ?? "Radius";
-	const gateway = normalizeRadiusGatewayUrl(options.gateway ?? DEFAULT_RADIUS_GATEWAY);
+	const configuredGateway =
+		options.gateway ??
+		(typeof process !== "undefined" && typeof process.env?.RADIUS_GATEWAY_URL === "string"
+			? process.env.RADIUS_GATEWAY_URL
+			: undefined);
+	const gateway = configuredGateway ? normalizeRadiusGatewayUrl(configuredGateway) : undefined;
 	let models = getRadiusModels(id, undefined);
 	let inflightRefresh: Promise<void> | undefined;
 	const streams = piMessagesApi();
@@ -30,7 +34,15 @@ export function radiusProvider(options: RadiusProviderOptions = {}): Provider<"p
 		name,
 		auth: {
 			apiKey: envApiKeyAuth("Radius API key", ["RADIUS_API_KEY"]),
-			oauth: lazyOAuth({ name, load: () => loadRadiusOAuth({ name, gateway }) }),
+			oauth: lazyOAuth({
+				name,
+				load: () => {
+					if (!gateway) {
+						throw new Error("Radius OAuth requires RADIUS_GATEWAY_URL or a custom provider baseUrl");
+					}
+					return loadRadiusOAuth({ name, gateway });
+				},
+			}),
 		},
 		getModels: () => models,
 		refreshModels: (context) => {
@@ -48,7 +60,7 @@ export function radiusProvider(options: RadiusProviderOptions = {}): Provider<"p
 						}
 					}
 
-					if (!context.allowNetwork || context.signal?.aborted) return;
+					if (!context.allowNetwork || context.signal?.aborted || !gateway) return;
 					const apiKey =
 						context.credential?.type === "oauth" ? context.credential.access : context.credential?.key;
 					const config = await loadRadiusGatewayConfig(gateway, apiKey, context.signal);

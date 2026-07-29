@@ -1,23 +1,32 @@
 name: Bug Report
-description: Report something that's broken
+description: Report a reproducible Pi Trainer problem
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        **Before you start:** Read [CONTRIBUTING.md](https://github.com/earendil-works/pi/blob/main/CONTRIBUTING.md).
+        Read [CONTRIBUTING.md](https://github.com/whl736989911/pi-trainer/blob/main/CONTRIBUTING.md) before submitting. Remove credentials, Tokens, Session content and user files from logs.
 
-        New issues from new contributors are auto-closed by default. Maintainers review auto-closed issues daily. Issues that do not meet the quality bar in [CONTRIBUTING.md](https://github.com/earendil-works/pi/blob/main/CONTRIBUTING.md) will not be reopened or receive a reply.
-
-        Keep this short. If it doesn't fit on one screen, it's too long. Write in your own voice.
-
-        **Important:** before reporting an issue in core, please validate first with `pi -ne` that this is not caused by an extension you loaded.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Skill Trainer conversation or documents
+        - Formal replay or sandbox
+        - Feishu/Lark gateway
+        - Terminal or CLI
+        - Model provider
+        - Build or test
+        - Other
+    validations:
+      required: true
 
   - type: textarea
     id: description
     attributes:
       label: What happened?
-      description: Be specific. Include error messages if any.
+      description: Include the exact error and why it affects Pi Trainer.
     validations:
       required: true
 
@@ -25,7 +34,7 @@ body:
     id: repro
     attributes:
       label: Steps to reproduce
-      description: Minimal steps to trigger the bug.
+      description: Provide the smallest reproducible case.
     validations:
       required: true
 
@@ -34,12 +43,12 @@ body:
     attributes:
       label: Expected behavior
     validations:
-      required: false
+      required: true
 
   - type: input
-    id: version
+    id: environment
     attributes:
-      label: Version
-      description: e.g. 0.49.0
+      label: Environment
+      description: Commit, OS, Node.js version and run mode (TUI, Lark, RPC or SDK).
     validations:
-      required: false
+      required: true

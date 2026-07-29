@@ -16,14 +16,17 @@ pkg update && pkg upgrade
 # Install dependencies
 pkg install nodejs termux-api git
 
-# Install pi
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+# Build Pi Trainer from this repository
+git clone https://github.com/whl736989911/pi-trainer.git ~/pi-trainer
+cd ~/pi-trainer
+npm install
+npm run build
 
 # Create config directory
 mkdir -p ~/.pi/agent
 
-# Run pi
-pi
+# Run Pi Trainer
+node ~/pi-trainer/packages/coding-agent/dist/cli.js
 ```
 
 ## Clipboard Support

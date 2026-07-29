@@ -1,113 +1,204 @@
-<p align="center">
-  <a href="https://pi.dev">
-    <img alt="pi logo" src="https://pi.dev/logo-auto.svg" width="128">
-  </a>
-</p>
-<p align="center">
-  <a href="https://discord.com/invite/3cU7Bz4UPx"><img alt="Discord" src="https://img.shields.io/badge/discord-community-5865F2?style=flat-square&logo=discord&logoColor=white" /></a>
-  <a href="https://www.npmjs.com/package/@earendil-works/pi-coding-agent"><img alt="npm" src="https://img.shields.io/npm/v/@earendil-works/pi-coding-agent?style=flat-square" /></a>
-</p>
+# Pi Trainer
 
-> New issues and PRs from new contributors are auto-closed by default. Maintainers review auto-closed issues daily. See [CONTRIBUTING.md](CONTRIBUTING.md).
+面向真实业务知识沉淀的专用 Skill 训练 Agent。
 
-# Pi Agent Harness
+Pi Trainer 通过自然对话提取、澄清、修正并确认业务知识，最终生成可追溯、自包含的 Skill。项目内置飞书/Lark 通信网关和 Skill Trainer，不需要再单独安装 `pi-lark` 或 `pi-skill-trainer`。
 
-This is the home of the Pi agent harness project including our self extensible coding agent.
+> 当前处于开发阶段。源码构建、飞书持久会话、流式卡片和训练消息归档已经验证；正式发行包、完整跨平台服务安装器和真实业务文档质量验收仍在推进。
 
-* **[@earendil-works/pi-coding-agent](packages/coding-agent)**: Interactive coding agent CLI
-* **[@earendil-works/pi-agent-core](packages/agent)**: Agent runtime with tool calling and state management
-* **[@earendil-works/pi-ai](packages/ai)**: Unified multi-provider LLM API (OpenAI, Anthropic, Google, …)
+## 核心能力
 
-To learn more about Pi:
+### 对话式 Skill 训练
 
-* [Visit pi.dev](https://pi.dev), the project website with demos
-* [Read the documentation](https://pi.dev/docs/latest), but you can also ask the agent to explain itself
+- 从自然语言、真实案例、文件和用户修正中提取知识。
+- 分离用户数据、文档数据、工具结果与模型候选。
+- 记录修正前后内容、原因、影响对象和确认凭证。
+- 维护输入 → 步骤 → 数据/工具 → 决策 → 输出的引用链。
+- 检查来源、范围、条件、例外、缺失处理和工具依赖。
 
-## All Packages
+### 五类业务文档
 
-| Package | Description |
-|---------|-------------|
-| **[@earendil-works/pi-ai](packages/ai)** | Unified multi-provider LLM API (OpenAI, Anthropic, Google, etc.) |
-| **[@earendil-works/pi-agent-core](packages/agent)** | Agent runtime with tool calling and state management |
-| **[@earendil-works/pi-coding-agent](packages/coding-agent)** | Interactive coding agent CLI |
-| **[@earendil-works/pi-tui](packages/tui)** | Terminal UI library with differential rendering |
+编译后的 Skill 明确生成：
 
-For Slack/chat automation and workflows see [earendil-works/pi-chat](https://github.com/earendil-works/pi-chat).
+- `DATA.md`：事实、参数、术语和案例数据。
+- `RULES.md`：业务规则和约束。
+- `FORMULAS.md`：表达式、变量、单位、来源、精度与舍入。
+- `STEPS.md`：可执行步骤、完成条件和失败处理。
+- `DECISIONS.md`：判断问题、分支条件、结果和数据引用。
 
-## Permissions & Containerization
+同时生成 `SKILL.md`、`SETUP.md`、`TOOLS.md`、案例、测试、数据快照、工具锁和验证脚本。
 
-Pi does not include a built-in permission system for restricting filesystem, process, network, or credential access. By default, it runs with the permissions of the user and process that launched it.
+### 飞书/Lark 内置网关
 
-If you need stronger boundaries, containerize or sandbox Pi. See [packages/coding-agent/docs/containerization.md](packages/coding-agent/docs/containerization.md) for three patterns:
+- WebSocket 长连接，无需公网回调地址。
+- 按聊天和话题维持稳定的持久 Session。
+- CardKit 流式回复和工具执行状态。
+- 图片、文件及富文本消息输入。
+- 用户 OAuth 与 Token 加密存储。
+- 飞书多维表格、日历、云盘搜索、消息和只读 OpenAPI 工具。
+- 私聊白名单和群聊策略。
 
-- **Gondolin extension**: keep `pi` and provider auth on the host while routing built-in tools and `!` commands into a local Linux micro-VM.
-- **Plain Docker**: run the whole `pi` process in a local container for simple isolation.
-- **OpenShell**: run the whole `pi` process in a policy-controlled sandbox.
+### 闭世界回放
 
-## Contributing
+正式回放只允许使用：
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [AGENTS.md](AGENTS.md) for project-specific rules (for both humans and agents).  Longer term plans for Pi can also be found in [RFCs](https://rfc.earendil.com/keyword/pi/).
+1. 编译后的 Skill 文档和本地数据；
+2. 当前测试输入；
+3. Skill 声明且 Schema 已锁定的工具结果。
 
-## Development
+回放 Session 不继承训练历史、全局知识、项目上下文、其他 Skills、Prompt 模板或自动发现的 Extensions。文件访问使用受目录边界保护的 `skill_read`、`skill_list` 和 `skill_find`，不会回退到不受限文件或 Shell 工具。
+
+仅通过提示词要求 Agent 不读取外部内容、但仍保留访问权限的测试，会被标记为“逻辑回放”，不能证明 Skill 自包含。
+
+## 项目状态
+
+已验证：
+
+- Monorepo TypeScript 检查与构建。
+- Skill Trainer 内置加载及训练状态持久化。
+- 五类文档编译和公式完整性检查。
+- Lark 内置网关的真实消息入站、持久 Session、流式回复卡片和训练消息归档。
+- 工具 Schema 稳定哈希、漂移拒绝和受限文件访问。
+- Windows 计划任务运行内置 `pi lark serve`。
+
+仍需完成：
+
+- 使用真实业务案例验收五类文档是否合理、完整。
+- 正式的 Windows/Linux 安装、升级、卸载和迁移脚本。
+- Windows 与 Linux 独立测试基线。
+- 外部工具受控代理和更严格的 Docker/沙箱验证。
+- 可安装发行包与版本发布流程。
+
+## 从源码运行
+
+### 环境要求
+
+- Node.js `>= 22.19.0`
+- npm
+- Git
+- 至少一个可用的模型提供商账号或 API Key
+
+### 安装与构建
 
 ```bash
-npm install --ignore-scripts  # Install all dependencies without running lifecycle scripts
-npm run build         # Refresh model data, then build all packages
-npm run build:offline # Rebuild using existing model data without network access
-npm run check         # Lint, format, and type check
-./test.sh            # Run tests (skips LLM-dependent tests without API keys)
-./pi-test.sh         # Run pi from sources (can be run from any directory)
+git clone https://github.com/whl736989911/pi-trainer.git
+cd pi-trainer
+npm install --ignore-scripts
+npm run hydrate:model-data
+npm run build
 ```
 
-## Building standalone binaries from release source
-
-GitHub releases include a versioned source archive covered by the release's `SHA256SUMS` file. Extract it and run the same build script used for the official standalone binaries:
+启动终端 Agent：
 
 ```bash
-VERSION="<release-version>"
-tar -xzf "pi-${VERSION}-source.tar.gz"
-cd "pi-${VERSION}"
-./scripts/build-binaries.sh --offline-model-data --platform linux-x64 --out "$PWD/out"
+node packages/coding-agent/dist/cli.js
 ```
 
-The source archive includes the generated provider model data used for the release. `--offline-model-data` builds with that snapshot instead of refreshing it from live provider catalogs. The script still installs dependencies, builds the monorepo, compiles the Bun executable, and stages its runtime assets. Package maintainers who provide dependencies separately can pass `--skip-install --skip-deps`.
+开发期间也可以使用：
 
-## Supply-chain hardening
+```bash
+# Linux/macOS
+./pi-test.sh
 
-We treat npm dependency changes as reviewed code changes.
+# Windows PowerShell
+./pi-test.ps1
+```
 
-- Direct external dependencies are pinned to exact versions. Internal workspace packages remain version-ranged.
-- `.npmrc` sets `save-exact=true` and `min-release-age=2` to avoid same-day dependency releases during npm resolution.
-- `package-lock.json` is the dependency ground truth. Pre-commit blocks accidental lockfile commits unless `PI_ALLOW_LOCKFILE_CHANGE=1` is set.
-- `npm run check` verifies pinned direct deps, native TypeScript import compatibility, and the generated coding-agent shrinkwrap.
-- The published CLI package includes `packages/coding-agent/npm-shrinkwrap.json`, generated from the root lockfile, to pin transitive deps for npm users.
-- Release smoke tests use `npm run release:local` to build, pack, and create isolated npm and Bun installs outside the repo before tagging a release.
-- Local release installs, documented npm installs, and `pi update --self` use `--ignore-scripts` where supported.
-- CI installs with `npm ci --ignore-scripts`, and a scheduled GitHub workflow runs `npm audit --omit=dev` plus `npm audit signatures --omit=dev`.
-- Shrinkwrap generation has an explicit allowlist for dependency lifecycle scripts; new lifecycle-script deps fail checks until reviewed.
+## 飞书/Lark 配置
 
-## Share your OSS coding agent sessions
+先在飞书或 Lark 开放平台创建企业自建应用并取得 App ID 和 App Secret，然后运行：
 
-If you use Pi or other coding agents for open source work, please share your sessions.
+```bash
+node packages/coding-agent/dist/cli.js lark setup
+```
 
-Public OSS session data helps improve coding agents with real-world tasks, tool use, failures, and fixes instead of toy benchmarks.
+前台启动网关：
 
-For the full explanation, see [this post on X](https://x.com/badlogicgames/status/2037811643774652911).
+```bash
+node packages/coding-agent/dist/cli.js lark serve
+```
 
-To publish sessions, use [`badlogic/pi-share-hf`](https://github.com/badlogic/pi-share-hf). Read its README.md for setup instructions. All you need is a Hugging Face account, the Hugging Face CLI, and `pi-share-hf`.
+查看状态：
 
-You can also watch [this video](https://x.com/badlogicgames/status/2041151967695634619), where I show how I publish my `pi-mono` sessions.
+```bash
+node packages/coding-agent/dist/cli.js lark status
+```
 
-I regularly publish my own `pi-mono` work sessions here:
+常用环境变量：
 
-- [badlogicgames/pi-mono on Hugging Face](https://huggingface.co/datasets/badlogicgames/pi-mono)
+| 变量 | 用途 |
+|---|---|
+| `PI_LARK_APP_ID` | 应用 App ID |
+| `PI_LARK_APP_SECRET` | 应用 App Secret |
+| `PI_LARK_ALLOW_FROM` | 允许访问的用户 `open_id` 列表 |
+| `PI_LARK_BRAND` | `feishu` 或 `lark` |
+| `PI_LARK_GROUP_POLICY` | `disabled`、`mention` 或 `open` |
+| `PI_LARK_WORKSPACE` | Agent 工作目录 |
+| `PI_LARK_DATA_DIR` | 网关配置、Session 和媒体目录 |
 
-## License
+配置以 AES-256-GCM 加密保存。不要提交数据目录、密钥、Token、Session 或飞书附件。
 
-MIT
+## Skill Trainer 使用方式
 
-<p align="center">
-  <a href="https://pi.dev">pi.dev</a> domain graciously donated by
-  <br /><br />
-  <a href="https://exe.dev"><img src="packages/coding-agent/docs/images/exy.png" alt="Exy mascot" width="48" /><br />exe.dev</a>
-</p>
+整个 Agent 都用于 Skill 训练，不存在独立的“普通聊天模式”。任务还不明确时，消息和文件进入全局训练知识库；知识必须经过确认并物化为 Skill 本地快照后，才能成为正式 Skill 的数据。
+
+常用命令：
+
+- `/training-start`：创建或继续训练状态。
+- `/training-status`：查看目标、案例、结构和未确认项。
+- `/knowledge-status`：查看跨 Session 训练知识。
+
+训练完成前会依次执行：
+
+1. 数据闭包检查；
+2. Skill 编译；
+3. 隔离 Session 回放；
+4. 用户审核回放结果；
+5. 边界案例测试；
+6. 产物和环境验证。
+
+Agent 不会自行确认业务文档或回放结果正确。
+
+## 数据目录
+
+默认目录：
+
+- Skill 训练状态：`~/.pi/agent/skill-training/`
+- 普通 Agent Session：`~/.pi/agent/sessions/`
+- Lark 数据：Windows 为 `%LOCALAPPDATA%/pi-lark/`，Linux 为 `$XDG_DATA_HOME/pi-lark/` 或 `~/.local/share/pi-lark/`
+
+迁移或备份时应同时保留训练状态、知识索引、Lark 加密配置、加密密钥和 Session 索引。不要公开这些文件。
+
+## 开发
+
+```bash
+npm run check
+npm run build:offline
+npm test
+```
+
+当前 Windows 环境中的完整上游测试集包含依赖 `/bin/bash`、符号链接权限和 Unix 路径语义的测试。报告测试结果时必须区分平台限制、上游既有失败与本项目新增回归，不能只报告通过数量。
+
+主要代码位置：
+
+```text
+packages/coding-agent/src/capabilities/
+├── lark/
+└── skill-trainer/
+```
+
+贡献前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 和 [AGENTS.md](AGENTS.md)。安全问题请遵循 [SECURITY.md](SECURITY.md)。
+
+## 安全边界
+
+Pi Trainer 是本地高权限 Agent。普通训练 Session 中启用的 Extensions 和工具可以访问当前用户能够访问的文件、进程、网络和凭证。只在可信工作区运行，并审查所有第三方资源。
+
+闭世界回放提供的是训练验证边界，不代表最终部署平台自动获得同等隔离。需要更强的操作系统隔离时，请使用容器或专用沙箱。
+
+## 上游与许可证
+
+本项目基于 MIT 许可的 Pi Monorepo 定制，保留原项目许可证和历史。内部 `@earendil-works/*` 包名用于保持上游兼容，并不表示本项目由上游官网托管或发布。
+
+项目仓库：https://github.com/whl736989911/pi-trainer
+
+许可证：[MIT](LICENSE)

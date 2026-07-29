@@ -1,7 +1,7 @@
 {
 	"name": "@earendil-works/pi-server",
 	"version": "0.82.1",
-	"description": "experimental server package for pi",
+	"description": "Experimental local RPC server for Pi Trainer",
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
@@ -33,7 +33,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/earendil-works/pi.git",
+		"url": "git+https://github.com/whl736989911/pi-trainer.git",
 		"directory": "packages/server"
 	},
 	"engines": {

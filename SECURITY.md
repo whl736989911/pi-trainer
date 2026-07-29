@@ -1,87 +1,98 @@
-# Security Policy
+# 安全策略
 
-This document should guide you about understanding the security concept behind
-Pi and also where the boundaries are.
+Pi Trainer 是本地运行的高权限 Agent，并可通过飞书/Lark 接收远程消息。安全评估必须区分普通训练运行、Lark 控制平面和正式闭世界回放。
 
-In general Pi is a coding agent that runs locally within the security boundary
-of the user that is running it.  It's the responsibiltiy of the user to monitor
-its operations or to contain it within a container, virtual machine or other
-Sandbox solution.
+## 支持范围
 
-Pi treats the local user account and files writable by that account as inside
-the same trust boundary as the Pi process itself.  If an attacker can modify files
-under the user's home directory, workspace, shell startup files, environment, or
-Pi configuration, they can generally influence Pi or other local developer tools.
-Reports that depend on such prior local write access are not security
-vulnerabilities unless they demonstrate how Pi grants that write access or crosses
-an operating-system privilege boundary.
+当前项目处于开发阶段，安全修复以最新 `main` 为准。尚未发布的历史提交不承诺单独维护。
 
-Pi relies on users installing trustworthy extensions and loading trustworthy
-skills and only to use pi within trusted repositories.  This is because files
-like `AGENTS.md` or instructions in comments can be used to prompt inject the
-coding agent trivially and this cannot be protected against.
+## 私下报告漏洞
 
-## Reporting a Vulnerability
+请使用本仓库的 GitHub Private Vulnerability Reporting：
 
-If you believe you found a security vulnerability in pi or another package in
-this repository, please report it privately by either:
+https://github.com/whl736989911/pi-trainer/security/advisories/new
 
-- Emailing `security@earendil.com`, or
-- Opening a private report through GitHub Security Advisories for this repository
+不要为敏感问题创建公开 Issue。
 
-Please include:
+报告请包含：
 
-- A description of the issue and its impact
-- Steps to reproduce, proof of concept, or relevant logs
-- Affected package, version, commit, or configuration
-- Any known mitigations
+- 问题与影响；
+- 最小复现或概念验证；
+- 受影响 Commit、平台和配置；
+- 实际越过的安全边界；
+- 已知缓解方式；
+- 已删除凭据、Token、用户文件和个人数据的日志。
 
-Do not open a public issue for security-sensitive reports.  We will review
-reports and coordinate disclosure as appropriate.
+## 普通 Agent 安全边界
 
-## Scope
+普通终端和训练 Session 默认继承启动用户的文件、进程、网络和凭据权限。内置工具、用户安装的 Extensions、Skills、工作区指令和模型输出都可能触发高权限操作。
 
-Security issues in the distributed packages, command-line tools, APIs, and
-repository code are in scope as well as earendil operated infrastricture
-on `pi.dev`.
+以下内容应视为同一可信边界：
 
-## Out Of Scope
+- 当前用户可写的工作区；
+- `~/.pi/agent/`；
+- `AGENTS.md`、`CLAUDE.md`、Skills 和 Extensions；
+- Shell 启动文件和环境变量；
+- 当前用户可访问的凭据；
+- 用户主动安装或批准的工具。
 
-- Local code execution or sandboxing behavior (the Pi coding agent intentionally does not have a sandbox)
-- Behavior of pi extensions or skills installed by the user
-- Risks from working in untrusted repositories
-- Risks from installing untrusted extensions, skills, packages, or tools
-- Isuses caused by non trustworthy MITM proxies
-- Public internet exposure of a Pi installation
-- Prompt injection attacks
-- Exposed secrets that are third-party/user-controlled credentials
-- Reports requiring the ability to create, modify, delete, or replace files,
-  directories, symlinks, environment variables, shell configuration, or other
-  user-controlled local state on the target machine. This includes `~/.pi`,
-  `~/.pi/agent/models.json`, workspace files, `AGENTS.md`, skills, extensions,
-  extension configuration, dotfiles, and files synchronized through NFS, roaming
-  profiles, or dotfile managers, unless the report shows how Pi itself grants
-  that access.
-- Issues caused by intentionally weakened user configuration.
-- Resource/DOS claims that require trusted local input/config against the pi coding agent.
-- Reports about malicious model output.
-- User-approved or user-initiated local actions presented as vulnerabilities.
+只在可信工作区运行。需要更强隔离时，应使用容器、虚拟机或专用沙箱。
 
-## Notes for Reporters
+## Lark 安全边界
 
-The most useful reports show a current, reproducible security boundary bypass
-with demonstrated impact.  Reports that only show expected local-agent behavior,
-prompt injection, or a malicious trusted extension/skill are not security
-vulnerabilities under this model.
+Lark 网关会将允许用户发送的消息交给本地 Agent，因此必须：
 
-For example, a report showing that malicious contents written to a trusted Pi
-configuration file cause Pi to execute commands, load attacker-controlled tools,
-send credentials to an attacker-controlled endpoint, or otherwise change behavior
-is out of scope.
+- 配置明确的 `open_id` 白名单；
+- 谨慎使用 `PI_LARK_ALLOW_FROM=*`；
+- 为群聊选择合适的 `disabled`、`mention` 或 `open` 策略；
+- 限制应用权限范围；
+- 保护 App Secret、加密配置密钥和 OAuth Token；
+- 限制附件大小并审查保存目录；
+- 使用独立低权限系统账号运行生产网关；
+- 定期检查计划任务或服务的实际启动命令。
 
-When possible, include the exact affected path, package version or commit SHA,
-configuration, and a proof of concept against the latest release or latest
-`main`.  For dependency reports, include evidence that the shipped dependency is
-affected and that the issue is reachable through Pi.  For exposed-secret reports,
-include evidence that the credential is owned by Earendil or grants access to
-Earendil-operated infrastructure or services.
+默认 Lark 数据目录包含配置、密钥、Token、Session 索引和用户附件，不得提交到 Git 或公开备份。
+
+## 正式闭世界回放
+
+正式回放的目标是验证编译 Skill 是否自包含。回放只应获得：
+
+- 编译后的 Skill 目录；
+- 本次测试输入；
+- Skill 声明且 Schema 已验证的工具。
+
+正式回放不应继承训练 Session、全局知识、项目上下文、自动发现资源或不受限文件/Shell 工具。
+
+仅依靠 Prompt 要求模型不要读取外部内容，不构成安全边界。无法从权限上切断外部访问时，结果只能标记为逻辑回放。
+
+## 在范围内
+
+- 未授权用户绕过 Lark 白名单或群聊策略；
+- Token、App Secret 或加密密钥被项目代码意外泄露；
+- 受限回放工具发生路径穿越或符号链接逃逸；
+- 未声明工具进入正式回放；
+- 工具 Schema 漂移未被检测；
+- 训练数据在未确认时被错误编译为正式业务数据；
+- 项目代码跨越操作系统用户或沙箱权限边界；
+- 依赖漏洞可通过本项目实际执行路径触发。
+
+## 通常不在范围内
+
+- 用户主动批准的普通 Agent 操作；
+- 已拥有当前用户文件写权限后修改可信配置或工作区；
+- 恶意模型输出本身；
+- 用户安装的不可信第三方 Extension、Skill 或工具；
+- 在明确标记为普通训练 Session 中访问当前用户可访问的文件；
+- 仅证明 Prompt Injection 存在，但没有跨越已声明权限边界；
+- 用户主动公开的第三方 API Key 或 Token；
+- 仅在过期提交中存在且最新 `main` 已修复的问题。
+
+如果问题展示了 Pi Trainer 自身如何首次授予攻击者写权限、绕过 Lark 身份限制、逃逸正式回放边界或提升操作系统权限，则仍属于有效报告。
+
+## 响应原则
+
+我们会确认报告、复现影响、提供缓解建议，并在修复后协调披露。修复时间取决于影响范围和项目阶段。不要在修复发布前公开利用细节。
+
+## 上游问题
+
+Pi Trainer 保留部分上游 Pi 代码。如果漏洞只影响未修改的上游组件，我们会判断是在本项目修复、同步上游修复，还是建议同时向上游维护者报告。报告者无需自行确定归属。

@@ -1,36 +1,40 @@
 name: Contribution Proposal
-description: Propose a change or feature (required for new contributors before submitting a PR)
-labels: []
+description: Propose a Pi Trainer change before submitting a large PR
+labels: ["proposal"]
 body:
   - type: markdown
     attributes:
       value: |
-        **Before you start:** Read [CONTRIBUTING.md](https://github.com/earendil-works/pi/blob/main/CONTRIBUTING.md).
-
-        New issues from new contributors are auto-closed by default. Maintainers review auto-closed issues daily. Issues that do not meet the quality bar in [CONTRIBUTING.md](https://github.com/earendil-works/pi/blob/main/CONTRIBUTING.md) will not be reopened or receive a reply.
-
-        Keep this short. If it doesn't fit on one screen, it's too long. Write in your own voice.
+        Read [CONTRIBUTING.md](https://github.com/whl736989911/pi-trainer/blob/main/CONTRIBUTING.md). Keep Lark and Skill Trainer internally modular and avoid unnecessary Pi core changes.
 
   - type: textarea
     id: what
     attributes:
       label: What do you want to change?
-      description: Be specific and concise.
+      description: Describe the user-visible outcome.
     validations:
       required: true
 
   - type: textarea
     id: why
     attributes:
-      label: Why?
-      description: What problem does this solve?
+      label: Why is this needed?
+      description: Explain how it improves document quality, traceability, Lark operation or formal replay.
     validations:
       required: true
 
   - type: textarea
     id: how
     attributes:
-      label: How? (optional)
-      description: Brief technical approach if you have one in mind.
+      label: Proposed approach
+      description: Include module boundaries, migration and rollback considerations.
     validations:
       required: false
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation plan
+      description: List normal, boundary and platform-specific tests.
+    validations:
+      required: true

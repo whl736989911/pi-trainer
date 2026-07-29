@@ -1,35 +1,18 @@
-# Pi Documentation
+# Pi Trainer 技术文档
 
-Pi is a minimal terminal coding harness. It is designed to stay small at the core while being extended through TypeScript extensions, skills, prompt templates, themes, and pi packages.
+Pi Trainer 保留上游终端 Agent 的扩展、Skill、Prompt 模板、主题、SDK 和 RPC 能力，并内置 Lark 与 Skill Trainer。产品概览和从源码安装方法见 [仓库 README](../../../README.md)。
 
 ## Quick start
 
-Install Pi with npm:
+当前从源码运行：
 
 ```bash
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent
-```
-
-`--ignore-scripts` disables dependency lifecycle scripts during install. Pi does not require install scripts for normal npm installs.
-
-On Linux or macOS, you can also use the installer:
-
-```bash
-curl -fsSL https://pi.dev/install.sh | sh
-```
-
-To uninstall pi itself, use npm for curl and npm installs:
-
-```bash
-npm uninstall -g @earendil-works/pi-coding-agent
-```
-
-For pnpm, Yarn, or Bun installs, use the matching global remove command: `pnpm remove -g @earendil-works/pi-coding-agent`, `yarn global remove @earendil-works/pi-coding-agent`, or `bun uninstall -g @earendil-works/pi-coding-agent`.
-
-Then run it in a project directory:
-
-```bash
-pi
+git clone https://github.com/whl736989911/pi-trainer.git
+cd pi-trainer
+npm install --ignore-scripts
+npm run hydrate:model-data
+npm run build
+node packages/coding-agent/dist/cli.js
 ```
 
 Authenticate with `/login` for subscription providers, or set an API key such as `ANTHROPIC_API_KEY` before starting pi.

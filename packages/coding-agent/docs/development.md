@@ -1,71 +1,105 @@
 # Development
 
-See [AGENTS.md](https://github.com/earendil-works/pi-mono/blob/main/AGENTS.md) for additional guidelines.
+Read the repository [AGENTS.md](../../../AGENTS.md) and [CONTRIBUTING.md](../../../CONTRIBUTING.md) before changing code.
 
 ## Setup
 
 ```bash
-git clone https://github.com/earendil-works/pi-mono
-cd pi-mono
-npm install
+git clone https://github.com/whl736989911/pi-trainer.git
+cd pi-trainer
+npm install --ignore-scripts
+npm run hydrate:model-data
 npm run build
 ```
 
 Run from source:
 
 ```bash
-/path/to/pi-mono/pi-test.sh
+# Linux/macOS
+./pi-test.sh
+
+# Windows PowerShell
+./pi-test.ps1
 ```
 
-The script can be run from any directory. Pi keeps the caller's current working directory.
+The scripts preserve the caller's working directory.
 
-## Forking / Rebranding
+## Product modules
 
-Configure via `package.json`:
+Pi Trainer-specific code belongs under:
+
+```text
+packages/coding-agent/src/capabilities/
+├── lark/
+└── skill-trainer/
+```
+
+Prefer SDK, inline Extensions, ResourceLoader configuration and Session events. Modify Pi core or TUI only when the required first-class behavior cannot be implemented through those boundaries.
+
+## Compatibility configuration
+
+The coding-agent package retains the `pi` binary and `.pi` configuration directory for compatibility:
 
 ```json
 {
   "piConfig": {
-    "name": "pi",
     "configDir": ".pi"
   }
 }
 ```
 
-Change `name`, `configDir`, and `bin` field for your fork. Affects CLI banner, config paths, and environment variable names.
+Do not rename package imports or configuration paths without a migration plan for existing settings, credentials, Sessions, Lark data and training state.
 
-## Path Resolution
+## Package assets
 
-Three execution modes: npm install, standalone binary, tsx from source.
+Always resolve package assets through `src/config.ts` helpers such as `getPackageDir()` and `getThemeDir()`. Never use `__dirname` directly for package assets.
 
-**Always use `src/config.ts`** for package assets:
+## Debug command
 
-```typescript
-import { getPackageDir, getThemeDir } from "./config.js";
-```
+`/debug` is hidden and writes `~/.pi/agent/pi-debug.log`, including rendered TUI lines and recent model messages. Treat this file as sensitive.
 
-Never use `__dirname` directly for package assets.
+## Checks
 
-## Debug Command
-
-`/debug` (hidden) writes to `~/.pi/agent/pi-debug.log`:
-- Rendered TUI lines with ANSI codes
-- Last messages sent to the LLM
-
-## Testing
+From the repository root:
 
 ```bash
-./test.sh                         # Run non-LLM tests (no API keys needed)
-npm test                          # Run all tests
-npm test -- test/specific.test.ts # Run specific test
+npm run check
+npm run build:offline
 ```
 
-## Project Structure
+Targeted Capability tests:
 
+```bash
+cd packages/coding-agent
+npx vitest --run test/lark-built-in.test.ts test/skill-trainer-compiler.test.ts
 ```
+
+Full package tests:
+
+```bash
+npm --prefix packages/coding-agent test
+```
+
+Record Windows and Linux results separately. Classify `/bin/bash`, symbolic-link permission, path-format and filesystem error-code differences instead of hiding them in a single pass/fail total.
+
+## Project structure
+
+```text
 packages/
-  ai/           # LLM provider abstraction
-  agent/        # Agent loop and message types  
-  tui/          # Terminal UI components
-  coding-agent/ # CLI and interactive mode
+  ai/             # LLM provider abstraction
+  agent/          # Agent loop and message types
+  tui/            # Terminal UI components
+  coding-agent/   # Main CLI, Lark and Skill Trainer
+  server/         # Server components
+  storage/        # Session storage adapters
 ```
+
+## Upstream synchronization
+
+Keep upstream changes separate from product changes where practical. When syncing:
+
+1. record the upstream commit;
+2. resolve Capability conflicts without moving business logic into core;
+3. run checks and targeted tests;
+4. verify Windows and Linux behavior;
+5. rebuild and verify the Lark service command before replacing a running gateway.

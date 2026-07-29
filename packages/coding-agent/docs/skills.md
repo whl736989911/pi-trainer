@@ -225,7 +225,6 @@ cd /path/to/brave-search && npm install
 ```
 ````
 
-## Skill Repositories
+## Skill sources
 
-- [Anthropic Skills](https://github.com/anthropics/skills) - Document processing (docx, pdf, pptx, xlsx), web development
-- [Pi Skills](https://github.com/badlogic/pi-skills) - Web search, browser automation, Google APIs, transcription
+Only install skills from sources you trust. Imported skills are not automatically accepted as confirmed business knowledge; reusable data must still pass Pi Trainer's confirmation, materialization, and closure requirements.

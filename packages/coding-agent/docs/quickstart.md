@@ -1,91 +1,108 @@
 # Quickstart
 
-This page gets you from install to a useful first pi session.
+This guide starts Pi Trainer from source, configures a model, and optionally enables Feishu/Lark.
 
-## Install
-
-Pi is distributed as an npm package:
+## Build
 
 ```bash
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+git clone https://github.com/whl736989911/pi-trainer.git
+cd pi-trainer
+npm install --ignore-scripts
+npm run hydrate:model-data
+npm run build
 ```
 
-`--ignore-scripts` disables dependency lifecycle scripts during install. Pi does not require install scripts for normal npm installs.
-
-### Uninstall
-
-Use the package manager that installed pi. The curl installer uses npm globally, so curl and npm installs are removed with npm:
+Run the terminal Agent:
 
 ```bash
-# curl installer or npm install -g
-npm uninstall -g @earendil-works/pi-coding-agent
-
-# pnpm
-pnpm remove -g @earendil-works/pi-coding-agent
-
-# Yarn
-yarn global remove @earendil-works/pi-coding-agent
-
-# Bun
-bun uninstall -g @earendil-works/pi-coding-agent
+node packages/coding-agent/dist/cli.js
 ```
 
-Uninstalling pi leaves settings, credentials, sessions, and installed pi packages in `~/.pi/agent/`.
-
-Then start pi in the project directory you want it to work on:
+Development shortcuts:
 
 ```bash
-cd /path/to/project
-pi
+./pi-test.sh   # Linux/macOS
+./pi-test.ps1  # Windows PowerShell
 ```
 
-## Authenticate
+No standalone package is published yet. Do not install the upstream npm package and assume it contains Pi Trainer's Lark or Skill Trainer capabilities.
 
-Pi can use subscription providers through `/login`, or API-key providers through environment variables or the auth file.
+## Authenticate a model
 
-### Option 1: subscription login
-
-Start pi and run:
+Start the Agent and run:
 
 ```text
 /login
 ```
 
-Then select a provider. Built-in subscription logins include Claude Pro/Max, ChatGPT Plus/Pro (Codex), and GitHub Copilot.
-
-### Option 2: API key
-
-Set an API key before launching pi:
+Select a subscription or API-key provider. You may also set a provider environment variable before launch, for example:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
-pi
+node packages/coding-agent/dist/cli.js
 ```
 
-You can also run `/login` and select an API-key provider to store the key in `~/.pi/agent/auth.json`.
+Credentials are stored under `~/.pi/agent/`. See [Providers](providers.md) for provider-specific setup.
 
-See [Providers](providers.md) for all supported providers, environment variables, and cloud-provider setup.
+## Start a training conversation
 
-## First session
+Pi Trainer is dedicated to Skill training. Describe a real task, its input and desired output. The Agent will progressively collect:
 
-Once pi starts, type a request and press Enter:
+- real cases;
+- facts and parameters;
+- rules and constraints;
+- formulas and units;
+- executable steps;
+- decisions and exceptions;
+- corrections and user confirmations.
+
+Useful commands:
 
 ```text
-Summarize this repository and tell me how to run its checks.
+/training-start
+/training-status
+/knowledge-status
 ```
 
-By default, pi gives the model four tools:
+The final Skill contains separate `DATA.md`, `RULES.md`, `FORMULAS.md`, `STEPS.md` and `DECISIONS.md` documents. The Agent will not confirm their business correctness on the user's behalf.
 
-- `read` - read files
-- `write` - create or overwrite files
-- `edit` - patch files
-- `bash` - run shell commands
+## Configure Feishu/Lark
 
-Additional built-in read-only tools (`grep`, `find`, `ls`) are available through tool options. Pi runs in your current working directory and can modify files there. Use git or another checkpointing workflow if you want easy rollback.
+Create an enterprise self-built application in Feishu or Lark, then run:
 
-## Give pi project instructions
+```bash
+node packages/coding-agent/dist/cli.js lark setup
+```
 
-Pi loads context files at startup. Add an `AGENTS.md` file to tell it how to work in a project:
+Start the gateway:
+
+```bash
+node packages/coding-agent/dist/cli.js lark serve
+```
+
+Check health:
+
+```bash
+node packages/coding-agent/dist/cli.js lark status
+```
+
+Use explicit user `open_id` values in the allowlist. Do not use `*` unless every tenant user should be allowed to operate the local Agent.
+
+## First terminal session
+
+Ask a concrete task:
+
+```text
+Train a quotation Skill. I will give you one real order and then correct the rules.
+```
+
+The normal terminal runtime includes file and shell tools. It runs with the permissions of the current operating-system user and can modify the workspace. Use Git and review changes.
+
+## Project instructions
+
+Pi Trainer loads `AGENTS.md` or `CLAUDE.md` from the global config, parent folders and current workspace. These files are trusted instructions and may influence tool use.
+
+Example:
 
 ```markdown
 # Project Instructions
@@ -95,71 +112,41 @@ Pi loads context files at startup. Add an `AGENTS.md` file to tell it how to wor
 - Keep responses concise.
 ```
 
-Pi loads:
+Run `/reload` or restart after changing resources.
 
-- `~/.pi/agent/AGENTS.md` for global instructions
-- `AGENTS.md` or `CLAUDE.md` from parent directories and the current directory
+## Common operations
 
-Restart pi, or run `/reload`, after changing context files.
-
-## Common things to try
-
-### Reference files
-
-Type `@` in the editor to fuzzy-search files, or pass files on the command line:
+Reference files with `@`:
 
 ```bash
-pi @README.md "Summarize this"
-pi @src/app.ts @src/app.test.ts "Review these together"
+node packages/coding-agent/dist/cli.js @README.md "Use this as training material"
 ```
 
-Images or text can be pasted with Ctrl+V (Alt+V on Windows); images can also be dragged into supported terminals.
+Manage Sessions inside the TUI with `/resume`, `/new`, `/tree`, `/fork`, `/clone` and `/compact`.
 
-### Run shell commands
-
-In interactive mode:
-
-```text
-!npm run lint
-```
-
-The command output is sent to the model. Use `!!command` to run a command without adding its output to the model context.
-
-### Switch models
-
-Use `/model` or Ctrl+L to choose a model. Use Shift+Tab to cycle thinking level. Use Ctrl+P / Shift+Ctrl+P to cycle through scoped models.
-
-### Continue later
-
-Sessions are saved automatically:
+One-shot mode:
 
 ```bash
-pi -c                  # Continue most recent session
-pi -r                  # Browse previous sessions
-pi --name "my task"    # Set session display name at startup
-pi --session <path|id> # Open a specific session
+node packages/coding-agent/dist/cli.js -p "Summarize this codebase"
 ```
 
-Inside pi, use `/resume`, `/new`, `/tree`, `/fork`, and `/clone` to manage sessions.
+Use `--mode json` for JSON events or `--mode rpc` for process integration.
 
-### Non-interactive mode
+## Data locations
 
-For one-shot prompts:
+- Agent settings and credentials: `~/.pi/agent/`
+- Skill training state: `~/.pi/agent/skill-training/`
+- Lark data on Windows: `%LOCALAPPDATA%/pi-lark/`
+- Lark data on Linux: `$XDG_DATA_HOME/pi-lark/` or `~/.local/share/pi-lark/`
 
-```bash
-pi -p "Summarize this codebase"
-cat README.md | pi -p "Summarize this text"
-pi -p @screenshot.png "What's in this image?"
-```
-
-Use `--mode json` for JSON event output or `--mode rpc` for process integration.
+Back up these directories carefully and never commit their credentials, encryption keys, Sessions or user files.
 
 ## Next steps
 
-- [Using Pi](usage.md) - interactive mode, slash commands, sessions, context files, and CLI reference.
-- [Providers](providers.md) - authentication and model setup.
-- [Settings](settings.md) - global and project configuration.
-- [Keybindings](keybindings.md) - shortcuts and customization.
-- [Pi Packages](packages.md) - install shared extensions, skills, prompts, and themes.
-
-Platform notes: [Windows](windows.md), [Termux](termux.md), [tmux](tmux.md), [Terminal setup](terminal-setup.md), [Shell aliases](shell-aliases.md).
+- [Settings](settings.md)
+- [Providers](providers.md)
+- [Skills](skills.md)
+- [Extensions](extensions.md)
+- [SDK](sdk.md)
+- [Security](security.md)
+- [Development](development.md)

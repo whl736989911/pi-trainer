@@ -16,11 +16,8 @@ beforeEach(() => {
 
 afterEach(() => {
 	vi.unstubAllGlobals();
-	if (originalSkipVersionCheck === undefined) {
-		delete process.env.PI_SKIP_VERSION_CHECK;
-	} else {
-		process.env.PI_SKIP_VERSION_CHECK = originalSkipVersionCheck;
-	}
+	if (originalSkipVersionCheck === undefined) delete process.env.PI_SKIP_VERSION_CHECK;
+	else process.env.PI_SKIP_VERSION_CHECK = originalSkipVersionCheck;
 });
 
 describe("version checks", () => {
@@ -34,20 +31,20 @@ describe("version checks", () => {
 	});
 
 	it("returns only newer versions", async () => {
-		const fetchMock = vi.fn(async () => Response.json({ version: "1.2.3" }));
+		const fetchMock = vi.fn(async () => Response.json({ tag_name: "v1.2.3" }));
 		vi.stubGlobal("fetch", fetchMock);
 
 		await expect(checkForNewPiVersion("1.2.3")).resolves.toBeUndefined();
 		await expect(checkForNewPiVersion("1.2.2")).resolves.toEqual({ version: "1.2.3" });
 	});
 
-	it("uses the pi.dev version check api with a pi user agent", async () => {
-		const fetchMock = vi.fn(async () => Response.json({ version: "1.2.4" }));
+	it("uses the Pi Trainer GitHub release API", async () => {
+		const fetchMock = vi.fn(async () => Response.json({ tag_name: "v1.2.4" }));
 		vi.stubGlobal("fetch", fetchMock);
 
 		await expect(getLatestPiVersion("1.2.3")).resolves.toBe("1.2.4");
 		expect(fetchMock).toHaveBeenCalledWith(
-			"https://pi.dev/api/latest-version",
+			"https://api.github.com/repos/whl736989911/pi-trainer/releases/latest",
 			expect.objectContaining({
 				headers: expect.objectContaining({
 					"User-Agent": expect.stringMatching(/^pi\/1\.2\.3 /),
@@ -57,29 +54,14 @@ describe("version checks", () => {
 		);
 	});
 
-	it("returns the active package metadata from the version check api", async () => {
-		const fetchMock = vi.fn(async () =>
-			Response.json({
-				packageName: "@new-scope/pi",
-				version: "1.2.4",
-			}),
-		);
-		vi.stubGlobal("fetch", fetchMock);
-
-		await expect(getLatestPiRelease("1.2.3")).resolves.toEqual({
-			packageName: "@new-scope/pi",
-			version: "1.2.4",
-		});
-	});
-
-	it("returns update notes from the version check api", async () => {
-		const fetchMock = vi.fn(async () => Response.json({ note: " **Read this** ", version: "1.2.4" }));
+	it("returns release notes from GitHub", async () => {
+		const fetchMock = vi.fn(async () => Response.json({ body: " **Read this** ", tag_name: "v1.2.4" }));
 		vi.stubGlobal("fetch", fetchMock);
 
 		await expect(getLatestPiRelease("1.2.3")).resolves.toEqual({ note: "**Read this**", version: "1.2.4" });
 	});
 
-	it("skips automatic api calls when version checks are disabled", async () => {
+	it("skips automatic API calls when version checks are disabled", async () => {
 		process.env.PI_SKIP_VERSION_CHECK = "1";
 		const fetchMock = vi.fn();
 		vi.stubGlobal("fetch", fetchMock);
@@ -88,9 +70,9 @@ describe("version checks", () => {
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
-	it("allows direct api calls when automatic version checks are disabled", async () => {
+	it("allows direct API calls when automatic version checks are disabled", async () => {
 		process.env.PI_SKIP_VERSION_CHECK = "1";
-		const fetchMock = vi.fn(async () => Response.json({ version: "1.2.4" }));
+		const fetchMock = vi.fn(async () => Response.json({ tag_name: "v1.2.4" }));
 		vi.stubGlobal("fetch", fetchMock);
 
 		await expect(getLatestPiVersion("1.2.3")).resolves.toBe("1.2.4");

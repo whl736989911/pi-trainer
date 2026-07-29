@@ -133,9 +133,7 @@ Use `/trust` in interactive mode to save a project trust decision for future ses
 
 Use `/export [file]` to write a session to HTML.
 
-Use `/share` to upload a private GitHub gist with a shareable HTML link.
-
-If you use pi for open source work and want to publish sessions for model, prompt, tool, and evaluation research, see [`badlogic/pi-share-hf`](https://github.com/badlogic/pi-share-hf). It publishes sessions to Hugging Face datasets.
+Use `/share` to upload a private GitHub gist with a shareable HTML link. Review the exported content and remove credentials, private business data, and Session details before sharing.
 
 ## CLI Reference
 
@@ -291,8 +289,4 @@ pi --exclude-tools ask_question
 
 ## Design Principles
 
-Pi keeps the core small and pushes workflow-specific behavior into extensions, skills, prompt templates, and packages.
-
-It intentionally does not include built-in MCP, sub-agents, permission popups, plan mode, to-dos, or background bash. You can build or install those workflows as extensions or packages, or use external tools such as containers and tmux.
-
-For the full rationale, read the [blog post](https://mariozechner.at/posts/2025-11-30-pi-coding-agent/).
+Pi Trainer keeps inherited core changes small and implements product-specific behavior as built-in, internally modular capabilities. Skill Trainer and the Feishu/Lark gateway are part of this distribution; additional workflows can use extensions, skills, prompt templates, packages, containers, or tmux.

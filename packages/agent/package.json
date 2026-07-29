@@ -46,7 +46,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/earendil-works/pi.git",
+		"url": "git+https://github.com/whl736989911/pi-trainer.git",
 		"directory": "packages/agent"
 	},
 	"engines": {

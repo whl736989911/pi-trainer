@@ -1,9 +1,9 @@
 # Environment Variables
 
-Pi uses environment variables in three ways:
+Pi Trainer uses environment variables in three ways:
 
-- Variables such as `PI_OFFLINE` configure the Pi process.
-- Pi sets `PI_CODING_AGENT` so child processes can detect that they run inside Pi.
+- Variables such as `PI_OFFLINE` configure the Pi Trainer process.
+- Pi Trainer sets `PI_CODING_AGENT` for compatibility so child processes can detect the Agent runtime.
 - Commands run by the LLM-callable bash tool receive `PI_*` variables describing the current session.
 
 Provider API-key variables are documented separately in [Providers](providers.md#environment-variables-or-auth-file).
@@ -67,7 +67,7 @@ const bashTool = createBashTool(cwd, {
 
 When disabled, Pi removes inherited values for these variables so nested Pi processes do not expose stale parent-session metadata.
 
-## Pi Process Configuration
+## Pi Trainer Process Configuration
 
 These variables are read by Pi itself:
 
@@ -76,9 +76,12 @@ These variables are read by Pi itself:
 | `PI_CODING_AGENT_DIR` | Override the config directory; default is `~/.pi/agent` |
 | `PI_CODING_AGENT_SESSION_DIR` | Override session storage; overridden by `--session-dir` |
 | `PI_PACKAGE_DIR` | Override the package directory, useful for Nix/Guix store paths |
-| `PI_OFFLINE` | Disable startup network operations, including update checks, package updates, and install/update telemetry |
-| `PI_SKIP_VERSION_CHECK` | Disable the `pi.dev` latest-version request |
-| `PI_TELEMETRY` | Override install/update telemetry and provider attribution headers: `1`/`true`/`yes` or `0`/`false`/`no` |
+| `PI_OFFLINE` | Disable startup network operations, including release and package update checks |
+| `PI_SKIP_VERSION_CHECK` | Disable the Pi Trainer GitHub Releases check |
+| `PI_TELEMETRY` | Control optional model-provider attribution headers: `1`/`true`/`yes` or `0`/`false`/`no` |
+| `PI_MODEL_CATALOG_URL` | Optional remote model catalog base URL; disabled when unset |
+| `RADIUS_GATEWAY_URL` | Optional trusted Radius model gateway used for compatibility; no default service is configured |
+| `PI_RADIUS_URL` | Optional trusted Radius presence server for the experimental server package; credentials are also required |
 | `PI_CACHE_RETENTION` | Set to `long` for extended provider prompt caching where supported |
 | `PI_SHARE_VIEWER_URL` | Override the base URL used by `/share` |
 | `PI_HARDWARE_CURSOR` | Set to `1` to show the hardware cursor; see [Terminal setup](terminal-setup.md) |

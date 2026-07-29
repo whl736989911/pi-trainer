@@ -18,8 +18,8 @@ Extensions run wherever the `pi` process runs. If you run host `pi` with a tool-
 
 ## Gondolin
 
-[Gondolin](https://github.com/earendil-works/gondolin) is a local Linux micro-VM.
-Use the [example extension](../examples/extensions/gondolin) when you want `pi` on the host but all built-in tools routed into the VM.
+Gondolin is an optional local Linux micro-VM dependency retained for compatibility.
+Use the [bundled example extension](../examples/extensions/gondolin) when you want Pi Trainer on the host but all built-in tools routed into the VM.
 
 Setup:
 
@@ -54,10 +54,12 @@ FROM node:24-bookworm-slim
 RUN apt-get update \
   && apt-get install -y --no-install-recommends bash ca-certificates git ripgrep \
   && rm -rf /var/lib/apt/lists/*
-RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+WORKDIR /opt/pi-trainer
+COPY . .
+RUN npm ci && npm run build
 
 WORKDIR /workspace
-ENTRYPOINT ["pi"]
+ENTRYPOINT ["node", "/opt/pi-trainer/packages/coding-agent/dist/cli.js"]
 ```
 
 Build and run:

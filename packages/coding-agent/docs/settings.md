@@ -76,9 +76,9 @@ For VS Code, include `--wait` so pi resumes after the editor exits:
 
 ### Telemetry and update checks
 
-`enableInstallTelemetry` only controls the anonymous install/update ping to `https://pi.dev/api/report-install`. Opting out of telemetry does not disable update checks; Pi can still fetch `https://pi.dev/api/latest-version` to look for the latest version.
+Pi Trainer 不发送安装或升级遥测。`enableInstallTelemetry` 仅保留用于兼容部分模型提供商的可选归属请求头。
 
-Set `PI_SKIP_VERSION_CHECK=1` to disable the Pi version update check. Use `--offline` or `PI_OFFLINE=1` to disable all startup network operations described here, including update checks, package update checks, and install/update telemetry.
+版本检查读取 Pi Trainer GitHub Releases。设置 `PI_SKIP_VERSION_CHECK=1` 可关闭版本检查；使用 `--offline` 或 `PI_OFFLINE=1` 可关闭启动阶段的网络操作。远程模型目录默认禁用，只有显式设置 `PI_MODEL_CATALOG_URL` 时才会启用。
 
 ### Network
 

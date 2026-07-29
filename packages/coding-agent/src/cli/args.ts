@@ -220,7 +220,7 @@ export function printHelp(extensionFlags?: ExtensionFlag[]): void {
 					})
 					.join("\n")}\n`
 			: "";
-	console.log(`${chalk.bold(APP_NAME)} - AI coding assistant with read, bash, edit, write tools
+	console.log(`${chalk.bold(APP_NAME)} - Pi Trainer Skill training agent with built-in Feishu/Lark gateway
 
 ${chalk.bold("Usage:")}
   ${APP_NAME} [options] [@files...] [messages...]
@@ -386,7 +386,8 @@ ${chalk.bold("Environment Variables:")}
   PI_PACKAGE_DIR                   - Override package directory (for Nix/Guix store paths)
   PI_OFFLINE                       - Disable startup network operations when set to 1/true/yes
   PI_TELEMETRY                     - Override install telemetry when set to 1/true/yes or 0/false/no
-  PI_SHARE_VIEWER_URL              - Base URL for /share command (default: https://pi.dev/session/)
+  PI_SHARE_VIEWER_URL              - Base URL for /share command (default: https://gist.github.com/)
+  PI_MODEL_CATALOG_URL             - Optional remote model catalog base URL
 
 ${chalk.bold("Built-in Tool Names:")}
   read   - Read file contents

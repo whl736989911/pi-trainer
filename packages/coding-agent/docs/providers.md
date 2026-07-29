@@ -53,7 +53,7 @@ Anthropic subscription auth is active for Claude Pro/Max accounts. Third-party h
 
 ### Radius
 
-Radius is a dynamic `pi-messages` gateway. `/login radius` stores OAuth tokens in `auth.json`; the gateway catalog is refreshed independently and cached in `models-store.json`. Custom Radius gateways can be declared in `models.json` with `"oauth": "radius"` and a gateway `baseUrl`.
+Radius is an optional dynamic `pi-messages` gateway retained for compatibility. Pi Trainer does not configure an upstream Radius service by default. Set `RADIUS_GATEWAY_URL` before `/login radius`, or declare a trusted custom gateway in `models.json` with `"oauth": "radius"` and a gateway `baseUrl`. Catalogs are cached in `models-store.json`.
 
 ## API Keys
 
@@ -102,7 +102,7 @@ pi
 | Xiaomi MiMo Token Plan (Amsterdam) | `XIAOMI_TOKEN_PLAN_AMS_API_KEY` | `xiaomi-token-plan-ams` |
 | Xiaomi MiMo Token Plan (Singapore) | `XIAOMI_TOKEN_PLAN_SGP_API_KEY` | `xiaomi-token-plan-sgp` |
 
-Reference for environment variables and `auth.json` keys: [`const envMap`](https://github.com/earendil-works/pi-mono/blob/main/packages/ai/src/env-api-keys.ts) in [`packages/ai/src/env-api-keys.ts`](https://github.com/earendil-works/pi-mono/blob/main/packages/ai/src/env-api-keys.ts).
+Reference for environment variables and `auth.json` keys: [`const envMap`](https://github.com/whl736989911/pi-trainer/blob/main/packages/ai/src/env-api-keys.ts) in [`packages/ai/src/env-api-keys.ts`](https://github.com/whl736989911/pi-trainer/blob/main/packages/ai/src/env-api-keys.ts).
 
 #### Auth File
 

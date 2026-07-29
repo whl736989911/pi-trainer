@@ -132,9 +132,9 @@ Add a `pi` manifest to `package.json` or use conventional directories. Include t
 
 Paths are relative to the package root. Arrays support glob patterns and `!exclusions`.
 
-### Gallery Metadata
+### Package Metadata
 
-The [package gallery](https://pi.dev/packages) displays packages tagged with `pi-package`. Add `video` or `image` fields to show a preview:
+Packages tagged with `pi-package` can include optional `video` or `image` metadata for compatible package indexes:
 
 ```json
 {

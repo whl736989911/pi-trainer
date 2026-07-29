@@ -45,6 +45,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	vi.restoreAllMocks();
+	vi.unstubAllEnvs();
 	if (tempDir && existsSync(tempDir)) rmSync(tempDir, { recursive: true });
 });
 
@@ -66,6 +67,7 @@ describe("Radius provider", () => {
 	});
 
 	it("fetches and stores the catalog for configured Radius auth", async () => {
+		vi.stubEnv("RADIUS_GATEWAY_URL", "https://radius.example.com");
 		vi.spyOn(globalThis, "fetch").mockResolvedValue(
 			new Response(JSON.stringify(radiusConfig("https://radius.example.com/v1")), {
 				status: 200,
@@ -117,7 +119,7 @@ describe("Radius provider", () => {
 		});
 
 		expect(runtime.getModels(RADIUS_PROVIDER_ID)).toEqual([]);
-		expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("radius.pi.dev/v1/config"))).toBe(false);
+		expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("/v1/config"))).toBe(false);
 	});
 
 	it("supports custom Radius gateways from models.json", async () => {

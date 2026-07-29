@@ -5,7 +5,6 @@ import { getServerDir, getSocketPath, VERSION } from "./config.ts";
 import { loadMachine, saveMachine } from "./storage.ts";
 import type { InstanceRecord, MachineRecord, RadiusRegistration } from "./types.ts";
 
-const DEFAULT_RADIUS_URL = "https://radius.pi.dev/";
 const DEFAULT_SERVER_BASE_PATH = "/v1/";
 const NOT_FOUND_RETRY_THRESHOLD = 3;
 const HEARTBEAT_BACKOFF_BASE_MS = 1_000;
@@ -105,7 +104,11 @@ function logRadiusRetry(scope: string, action: string, delayMs: number, failureC
 }
 
 export function getRadiusUrl(): string {
-	return process.env.PI_RADIUS_URL || DEFAULT_RADIUS_URL;
+	const configuredUrl = process.env.PI_RADIUS_URL;
+	if (!configuredUrl) {
+		throw new Error("Radius integration requires PI_RADIUS_URL");
+	}
+	return configuredUrl;
 }
 
 export function getRadiusServerBaseUrl(): string {
@@ -137,7 +140,7 @@ export function getRadiusAccessToken(): string {
 }
 
 export function isRadiusEnabled(): boolean {
-	return !!getStoredRadiusCredential()?.access || !!process.env.RADIUS_API_KEY;
+	return !!process.env.PI_RADIUS_URL && (!!getStoredRadiusCredential()?.access || !!process.env.RADIUS_API_KEY);
 }
 
 export class RadiusPresence {

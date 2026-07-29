@@ -33,13 +33,9 @@ session.subscribe((event) => {
 await session.prompt("What files are in the current directory?");
 ```
 
-## Installation
+## Workspace usage
 
-```bash
-npm install @earendil-works/pi-coding-agent
-```
-
-The SDK is included in the main package. No separate installation needed.
+The SDK is included in the Pi Trainer source workspace and is not independently published by this project. Run `npm install` and `npm run build` from the repository root, then import the compatibility package from the workspace.
 
 ## Core Concepts
 

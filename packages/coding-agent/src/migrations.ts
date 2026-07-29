@@ -9,9 +9,9 @@ import { CONFIG_DIR_NAME, getAgentDir, getBinDir } from "./config.ts";
 import { migrateKeybindingsConfig } from "./core/keybindings.ts";
 
 const MIGRATION_GUIDE_URL =
-	"https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/CHANGELOG.md#extensions-migration";
+	"https://github.com/whl736989911/pi-trainer/blob/main/packages/coding-agent/CHANGELOG.md#extensions-migration";
 const EXTENSIONS_DOC_URL =
-	"https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/docs/extensions.md";
+	"https://github.com/whl736989911/pi-trainer/blob/main/packages/coding-agent/docs/extensions.md";
 
 /**
  * Migrate legacy oauth.json and settings.json apiKeys to auth.json.

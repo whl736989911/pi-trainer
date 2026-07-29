@@ -333,7 +333,7 @@ export function getSelfUpdateUnavailableInstruction(
 	const method = detectInstallMethod();
 	const target = normalizeSelfUpdatePackageTarget(updatePackageTarget);
 	if (method === "bun-binary") {
-		return `Download from: https://github.com/earendil-works/pi-mono/releases/latest`;
+		return `Download from: https://github.com/whl736989911/pi-trainer/releases/latest`;
 	}
 	const command = getSelfUpdateCommandForMethod(method, packageName, target, npmCommand);
 	if (command) {
@@ -499,7 +499,7 @@ export function expandTildePath(path: string): string {
 	return normalizePath(path);
 }
 
-const DEFAULT_SHARE_VIEWER_URL = "https://pi.dev/session/";
+const DEFAULT_SHARE_VIEWER_URL = "https://gist.github.com/";
 
 /** Get the share viewer URL for a gist ID */
 export function getShareViewerUrl(gistId: string): string {

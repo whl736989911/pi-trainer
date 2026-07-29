@@ -1,102 +1,126 @@
-# Contributing to pi
+# 为 Pi Trainer 贡献
 
-This guide exists to save both sides time.
+感谢你参与 Pi Trainer。
 
-## Philosophy
+本项目的目标是构建一个专用 Skill 训练 Agent：通过自然对话整理业务知识，生成合理、完整、可追溯的数据、规则、公式、步骤和决策文档，并通过飞书/Lark 或终端持续使用。
 
-First things first: **pi's core is minimal**.
+## 开发原则
 
-If your feature does not belong in the core, it should be an extension. PRs that bloat the core will likely be rejected.
+1. **文档质量优先。** 基础设施必须服务于真实业务知识的提取、确认、编译和验证。
+2. **保持薄 Fork。** Lark 和 Skill Trainer 对用户是内置能力，内部仍应保持独立模块边界。
+3. **避免无必要的核心修改。** 优先使用 SDK、内置 Extensions、ResourceLoader 和 Session 事件。
+4. **保持数据可追溯。** 模型候选、用户数据、文档数据和工具结果必须可区分。
+5. **不伪造验证。** Agent 不能自行确认业务文档、模型回放或边界案例正确。
+6. **保持闭世界回放。** 正式回放不能访问训练历史、全局知识或未声明工具。
+7. **保护兼容性。** 修改上游核心行为时必须说明 Windows、Linux、现有配置、Session 和扩展兼容性影响。
 
-Pi's core exists to be minimal and to be extensible so that it can be influenced and manipulated by extensions.  Even hook points for extensions however should be well considered and discussed to avoid adding unmaintainable bloat and complex interactions.
+详细编码规则见 [AGENTS.md](AGENTS.md)。
 
-## The One Rule
+## 代码结构
 
-**You must understand your code.** If you cannot explain what your changes do and how they interact with the rest of the system, your PR will be closed.
+核心定制代码位于：
 
-Using AI to write code is fine. Submitting AI-generated slop without understanding it is not.
-
-If you use an agent, run it from the `pi` root directory so it picks up `AGENTS.md` automatically. Your agent must follow the rules and guidelines in that file.
-
-## Contribution Gate
-
-All issues and PRs from new contributors are auto-closed by default.
-
-Issues submitted Friday through Sunday are not guaranteed to be reviewed.  If something is urgent, ask on Discord: https://discord.com/invite/3cU7Bz4UPx
-
-Maintainers review auto-closed issues daily and reopen worthwhile ones. Issues that do not meet the quality bar below will not be reopened or receive a reply.
-
-Approval happens through maintainer replies on issues:
-
-- `lgtmi`: your future issues will not be auto-closed
-- `lgtm`: your future issues and PRs will not be auto-closed
-
-The command must be at the start of the reply (optionally after one or more `@username` mentions) or at the end. `lgtmi` does not grant rights to submit PRs. Only `lgtm` grants rights to submit PRs.
-
-## Quality Bar For Issues
-
-If you open an issue, you must use one of the two GitHub issue templates.
-
-If you open an issue, keep it short, concrete, and worth reading.
-
-- Keep it concise. If it does not fit on one screen, it is too long.
-- Write in your own voice (do not use an LLM to generate text, if you must, follow up with a clearly AI labeled comment).
-- State the bug or request clearly.
-- Explain why it matters.
-- If you want to implement the change yourself, say so.
-
-If the issue is real and written well, a maintainer may reopen it or reply with `lgtmi` or `lgtm` in the command position described above.
-
-## Blocking
-
-If you ignore this document twice, or if you spam the tracker with agent-generated issues, your GitHub account will be permanently blocked.
-
-If you send a large volume of issues through automation, your GitHub account will be permanently blocked. No taksies backsies.
-
-## Before Submitting a PR
-
-Do not open a PR unless you have already been approved by a maintainer using `lgtm` in the command position described above.
-
-Before submitting a PR:
-
-```bash
-npm run check
-./test.sh
+```text
+packages/coding-agent/src/capabilities/
+├── lark/
+└── skill-trainer/
 ```
 
-Both must pass.
+除非第一等产品行为确实需要，不要把 Capability 逻辑散落到 Pi core、TUI 或模型提供商代码中。
 
-Do not edit `CHANGELOG.md`. Changelog entries are added by maintainers.
+## 提交 Issue
 
-If you are adding a new provider to `packages/ai`, see `AGENTS.md` for required tests.
+请包含：
 
-## Questions?
+- 问题或需求的简短说明；
+- 为什么它影响 Pi Trainer；
+- 最小复现步骤或真实训练案例；
+- 操作系统、Node.js 版本和相关配置；
+- 期望结果与实际结果；
+- 已删除凭据和个人数据的日志。
 
-Ask on [Discord](https://discord.com/invite/nKXTsAcmbT).
+安全问题不要提交公开 Issue，请按照 [SECURITY.md](SECURITY.md) 私下报告。
 
-## FAQ
+## 提交 Pull Request
 
-### Why are new issues and PRs auto-closed?
+提交前：
 
-pi receives more issues than the maintainers can responsibly review in real time. Many reports do not meet the quality bar in this guide or do not follow CONTRIBUTING.md. Some are slung at the repository mindlessly via an agent instead of being reviewed and shaped by the person submitting them. Auto-closing creates a buffer so maintainers can review the tracker on their own schedule and reopen the issues that meet the quality bar.
+```bash
+npm install --ignore-scripts
+npm run hydrate:model-data
+npm run check
+npm run build:offline
+```
 
-### Why are weekend issues lower priority?
+按修改范围运行相关测试。涉及 Lark 或 Skill Trainer 时，至少运行：
 
-We triage the tracker during working hours. That means more issues can accumulate over the weekend. Anything submitted Friday through Sunday may be missed or given lower priority in the Monday review queue. If a problem is urgent, ask on Discord and include the short version, a repro, and the relevant logs.
+```bash
+cd packages/coding-agent
+npx vitest --run test/lark-built-in.test.ts test/skill-trainer-compiler.test.ts
+```
 
-### Why do some issues get no reply?
+Pull Request 应说明：
 
-A reply is maintenance work too. Low-signal issues, unclear reports, duplicates, and issues that do not follow this guide may be closed without discussion. This keeps time available for reproducible bugs, thoughtful requests, and contributors who have done the work to make their report actionable.
+- 修改目标；
+- 设计和取舍；
+- 影响的步骤、决策、数据、工具或 Session；
+- 执行过的命令和结果；
+- 未通过测试及其分类；
+- 数据迁移、回滚和安全影响。
 
-### Why not let AI triage everything?
+## 测试结果规则
 
-AI can help group duplicates, summarize reports, and spot missing information. It is not trusted to make final maintainer decisions. Polished AI-generated issues can still be wrong, misleading, or expensive to investigate. Human review remains the final gate.
+请分别记录 Windows 和 Linux 结果。完整上游测试集可能包含平台特定假设，例如：
 
-### Is this hostile to contributors?
+- `/bin/bash`；
+- Unix 符号链接权限；
+- Unix 路径格式；
+- 文件权限错误码差异。
 
-No. It is a guardrail against burnout and tracker spam. Short, concrete, reproducible issues are welcome. Thoughtful contributions are welcome. Automated slop, entitlement, and large volumes of low-effort reports are not.
+不能只写“测试通过”或“测试失败”。必须区分：
 
-## Where can I learn about plans?
+- 本项目新增回归；
+- 上游既有失败；
+- 环境或权限限制；
+- 未执行测试。
 
-Earendil uses RFCs to discuss larger changes.  Not all of them are public, but
-quite a few are.  They can be found at [rfc.earendil.com](https://rfc.earendil.com/keyword/pi/).
+## 训练相关修改
+
+修改 Skill Trainer 时，应验证：
+
+- 用户修正是否更新底层结构，而不是只修改最终文本；
+- 模型先验是否单独记录并等待确认；
+- 数据是否包含来源、范围、条件、例外和缺失处理；
+- 编译产物是否包含五类独立文档；
+- 正式回放是否只加载 Skill、本次输入和声明工具；
+- 回放和边界测试是否等待用户审核。
+
+## Lark 相关修改
+
+修改 Lark Capability 时，应验证：
+
+- 白名单和群聊策略；
+- WebSocket 重连与进程退出；
+- 持久 Session 路由；
+- CardKit 流式更新；
+- OAuth Token 和配置加密；
+- 图片、文件和富文本输入边界；
+- Windows/Linux 服务行为；
+- 日志中不包含 App Secret、Token 或用户文件内容。
+
+## 提交规范
+
+使用简洁的 Conventional Commit 风格，例如：
+
+```text
+feat(skill-trainer): add formula closure validation
+fix(lark): preserve route session after restart
+docs: rewrite Pi Trainer setup guide
+test(replay): reject undeclared tools
+```
+
+不要在没有必要时重写上游历史或大范围格式化无关文件。
+
+## 许可证
+
+提交代码即表示你有权在本项目 MIT 许可证下提供该贡献。保留上游许可证、版权声明和必要归属。

@@ -1,6 +1,11 @@
 {
-	"name": "pi-monorepo",
+	"name": "pi-trainer-monorepo",
+	"description": "Self-contained Skill training agent with built-in Feishu/Lark gateway",
 	"private": true,
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/whl736989911/pi-trainer.git"
+	},
 	"type": "module",
 	"workspaces": [
 		"packages/*",

@@ -4,6 +4,7 @@ import type { ExtensionAPI } from "../../../core/extensions/types.ts";
 import { compileSkill, validateClosure } from "./compiler.ts";
 import { proposeBoundaryCases, runReplay } from "./replay.ts";
 import { errorResult, jsonResult } from "./result.ts";
+import { listResponse, mutationResponse, summarizeItem, type ResponseDetail } from "./response-summary.ts";
 import type { TrainingStore } from "./store.ts";
 import { validateSkill } from "./validator.ts";
 
@@ -57,13 +58,14 @@ export function registerAdvancedTrainingTools(pi: ExtensionAPI, store: TrainingS
 			passed: Type.Optional(Type.Boolean()),
 			comment: Type.Optional(Type.String()),
 			confirmed_by_user: Type.Optional(Type.Boolean()),
+			detail: Type.Optional(Type.Union([Type.Literal("summary"), Type.Literal("full")])),
 		}),
 		async execute(_id, params, signal, _update, ctx) {
 			const p = params as any;
 			const sessionId = ctx.sessionManager.getSessionId();
 			try {
 				let state = await store.create(sessionId);
-				if (p.action === "list") return jsonResult(state.tests);
+				if (p.action === "list") return jsonResult(listResponse(state.tests, p.detail as ResponseDetail, "test"));
 				if (p.action === "add") {
 					if (!p.name || p.input === undefined) throw new Error("name and input are required");
 					state = await store.update(sessionId, (draft) => {
@@ -79,27 +81,26 @@ export function registerAdvancedTrainingTools(pi: ExtensionAPI, store: TrainingS
 							updatedAt: now,
 						});
 					});
-					return jsonResult(state.tests.at(-1));
+					return jsonResult(mutationResponse(state, p.action, "test", state.tests.at(-1)));
 				}
 				const test = state.tests.find((item) => item.id === p.test_id);
 				if (!test) throw new Error(`Unknown test: ${p.test_id}`);
 				if (p.action === "review") {
 					if (p.confirmed_by_user !== true || typeof p.passed !== "boolean")
 						throw new Error("review requires passed and confirmed_by_user=true");
-					return jsonResult(
-						await store.update(sessionId, (draft) => {
-							const item = draft.tests.find((entry) => entry.id === p.test_id)!;
-							item.status = p.passed ? "passed" : "failed";
-							item.userComment = p.comment;
-							item.reviewEvidence = {
-								source: "user_message",
-								piSessionId: sessionId,
-								entryId: (ctx.sessionManager as any).getLeafEntry?.()?.id,
-								confirmedAt: new Date().toISOString(),
-							};
-							item.updatedAt = new Date().toISOString();
-						}),
-					);
+					const reviewed = await store.update(sessionId, (draft) => {
+						const item = draft.tests.find((entry) => entry.id === p.test_id)!;
+						item.status = p.passed ? "passed" : "failed";
+						item.userComment = p.comment;
+						item.reviewEvidence = {
+							source: "user_message",
+							piSessionId: sessionId,
+							entryId: (ctx.sessionManager as any).getLeafEntry?.()?.id,
+							confirmedAt: new Date().toISOString(),
+						};
+						item.updatedAt = new Date().toISOString();
+					});
+					return jsonResult(mutationResponse(reviewed, p.action, "test", reviewed.tests.find((item) => item.id === p.test_id)));
 				}
 				if (!state.artifact?.path || !state.artifact.closureValid || state.artifact.stale)
 					throw new Error("必须先通过数据闭包检查并正式编译当前版本技能");
@@ -127,7 +128,8 @@ export function registerAdvancedTrainingTools(pi: ExtensionAPI, store: TrainingS
 						item.userComment = `技能使用范围检查失败：${replay.scopeAudit.violations.join("；")}`;
 					item.updatedAt = new Date().toISOString();
 				});
-				return jsonResult(updated.tests.find((item) => item.id === p.test_id));
+				const completed = updated.tests.find((item) => item.id === p.test_id);
+				return jsonResult({ ...summarizeItem(completed, "test"), actualResult: completed?.actualResult, scopeAudit: completed?.scopeAudit });
 			} catch (error) {
 				await markTestError(store, sessionId, p.test_id, error);
 				return errorResult(error);
@@ -197,7 +199,8 @@ export function registerAdvancedTrainingTools(pi: ExtensionAPI, store: TrainingS
 						item.userComment = `技能使用范围检查失败：${replay.scopeAudit.violations.join("；")}`;
 					item.updatedAt = new Date().toISOString();
 				});
-				return jsonResult(state.tests.find((item) => item.id === p.test_id));
+				const completed = state.tests.find((item) => item.id === p.test_id);
+				return jsonResult({ ...summarizeItem(completed, "test"), actualResult: completed?.actualResult, scopeAudit: completed?.scopeAudit });
 			} catch (error) {
 				await markTestError(store, sessionId, p.test_id, error);
 				return errorResult(error);

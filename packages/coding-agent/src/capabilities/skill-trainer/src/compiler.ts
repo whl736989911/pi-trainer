@@ -192,8 +192,7 @@ function createDocumentPlan(state: TrainingState): DocumentPlan {
 	const usedPaths = new Set<string>();
 	const dataPaths = new Map<string, string>();
 	for (const item of runtimeData(state)) {
-		const directory =
-			item.type === "formula" ? "formulas" : ["rule", "constraint"].includes(item.type) ? "rules" : "data";
+		const directory = documentDirectory(item);
 		const prefix = directory === "rules" ? `${stepFilePrefix(item, state)}-` : "";
 		dataPaths.set(item.id, uniquePath(`${directory}/${prefix}${sanitize(item.name)}.md`, usedPaths));
 	}
@@ -239,7 +238,7 @@ function skillMd(state: TrainingState, closure: ClosureReport, plan: DocumentPla
 		"- `tools.lock.json`：工具身份、推荐版本和输入 Schema 记录。",
 		"- `manifest.json`：编译产物清单和完整性哈希。",
 	].join("\n");
-	return `---\nname: ${name}\ndescription: ${JSON.stringify(description)}\nallowed-tools: ${allowedTools}\n---\n\n# ${goal?.skillName ?? "未命名技能"}\n\n## 技能功能\n${goal?.problem ?? ""}\n\n## 输入\n${list(goal?.inputs ?? [])}\n\n## 输出\n${list(goal?.outputs ?? [])}\n\n## 文件结构与内容\n${structure}\n\n## 阅读顺序\n下一步只读取 [STEPS.md](STEPS.md)。执行到具体步骤时，再读取该步骤操作中直接引用的规则、数据表、公式、决策和工具文档。不要预先加载全部业务文档。\n\n## 执行边界\n1. 只能使用当前任务输入、技能目录内文档和脚本，以及声明工具在本次任务中返回的结果。\n2. 不得使用模型先验、行业常识、训练对话或历史案例补充业务数据。\n3. 缺少必需数据时，按照被引用文档的缺失处理执行；不得为了完成输出而猜测。\n4. 训练案例和回放记录不属于正式技能内容。\n\n## 数据闭包状态\n- 编译时有效：${closure.valid ? "是" : "否（草稿）"}\n- 阻塞项：${closure.blockers.length}\n- 警告：${closure.warnings.length}\n`;
+	return `---\nname: ${name}\ndescription: ${JSON.stringify(description)}\nallowed-tools: ${allowedTools}\n---\n\n# ${goal?.skillName ?? "未命名技能"}\n\n## 技能功能\n${goal?.problem ?? ""}\n\n## 输入\n${list(goal?.inputs ?? [])}\n\n## 输出\n${list(goal?.outputs ?? [])}\n\n## 文件结构与内容\n${structure}\n\n## 阅读顺序\n下一步只读取 [STEPS.md](STEPS.md)。执行到具体步骤时，再读取该步骤操作中直接引用的规则、数据表、公式、格式、决策和工具文档。不要预先加载全部业务文档。\n\n## 执行边界\n1. 只能使用当前任务输入、技能目录内文档和脚本，以及声明工具在本次任务中返回的结果。\n2. 不得使用模型先验、行业常识、训练对话或历史案例补充业务数据。\n3. 缺少必需数据时，按照被引用文档的缺失处理执行；不得为了完成输出而猜测。\n4. 训练案例和回放记录不属于正式技能内容。\n\n## 数据闭包状态\n- 编译时有效：${closure.valid ? "是" : "否（草稿）"}\n- 阻塞项：${closure.blockers.length}\n- 警告：${closure.warnings.length}\n`;
 }
 
 function stepsMd(state: TrainingState, plan: DocumentPlan): string {
@@ -263,6 +262,7 @@ function stepMd(step: SkillStepDraft, state: TrainingState, plan: DocumentPlan, 
 		if (!path) continue;
 		if (["rule", "constraint"].includes(item.type)) operations.push(`根据 [${item.name}](${path}) 执行。`);
 		else if (item.type === "formula") operations.push(`按照 [${item.name}](${path}) 计算。`);
+		else if (isFormatDocument(item)) operations.push(`按照 [${item.name}](${path}) 生成输出。`);
 		else operations.push(`读取 [${item.name}](${path})。`);
 	}
 	const outputExample =
@@ -286,7 +286,7 @@ function toolSection(tool: ToolRecord): string {
 }
 
 function dataMd(item: SkillDataDraft, state: TrainingState, plan: DocumentPlan): string {
-	const title = ["rule", "constraint"].includes(item.type) ? "规则" : "数据表";
+	const title = ["rule", "constraint"].includes(item.type) ? "规则" : isFormatDocument(item) ? "格式" : "数据表";
 	return `# ${item.name}\n\n## ${title}内容\n${formatBlock(item.value)}\n\n## 使用约束\n- 单位：${item.unit ?? "无"}\n- 来源：${item.sourceType}${item.sourceDetail ? `；${item.sourceDetail}` : ""}\n- 适用范围：${item.scope ?? "未限定"}\n- 条件：${item.conditions.join("；") || "无"}\n- 例外：${item.exceptions.join("；") || "无"}\n- 缺失处理：${item.onMissing ?? "报告缺失并停止相关步骤"}\n- 使用位置：${usageLinks(item.usedIn, state, plan)}\n`;
 }
 
@@ -417,9 +417,19 @@ function stepFilePrefix(item: SkillDataDraft, state: TrainingState): string {
 	].sort((a, b) => a - b);
 	return orders.length === 1 ? `step${String(orders[0]).padStart(2, "0")}` : "shared";
 }
+function isFormatDocument(item: SkillDataDraft): boolean {
+	return item.type === "parameter" && /(?:^|输出)格式$/.test(item.topic);
+}
+function documentDirectory(item: SkillDataDraft): "rules" | "data" | "formulas" | "formats" {
+	if (item.type === "formula") return "formulas";
+	if (["rule", "constraint"].includes(item.type)) return "rules";
+	if (isFormatDocument(item)) return "formats";
+	return "data";
+}
 function documentDescription(item: SkillDataDraft): string {
 	if (item.type === "formula") return `公式：${item.name}`;
 	if (["rule", "constraint"].includes(item.type)) return `规则：${item.name}`;
+	if (isFormatDocument(item)) return `格式：${item.name}`;
 	return `数据表：${item.name}`;
 }
 function uniquePath(path: string, used: Set<string>): string {

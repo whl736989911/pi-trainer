@@ -2,11 +2,13 @@ import { Type } from "typebox";
 import type { ExtensionAPI } from "../../../core/extensions/types.ts";
 import { structureHash } from "./fingerprint.ts";
 import { errorResult, jsonResult } from "./result.ts";
+import { listResponse, mutationResponse, stateResponse, type ResponseDetail } from "./response-summary.ts";
 import type { TrainingStore } from "./store.ts";
 import type { TrainingState } from "./types.ts";
 
 const StringArray = Type.Array(Type.String());
 const OptionalStringArray = Type.Optional(StringArray);
+const OptionalResponseDetail = Type.Optional(Type.Union([Type.Literal("summary"), Type.Literal("full")]));
 
 export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): void {
 	pi.registerTool({
@@ -26,6 +28,7 @@ export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): v
 			inputs: OptionalStringArray,
 			outputs: OptionalStringArray,
 			rough_process: OptionalStringArray,
+			detail: OptionalResponseDetail,
 			stage: Type.Optional(
 				Type.Union([
 					Type.Literal("defining"),
@@ -39,27 +42,26 @@ export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): v
 			const p = params as any;
 			const sessionId = ctx.sessionManager.getSessionId();
 			try {
-				if (p.action === "get") return jsonResult(await store.get(sessionId));
-				if (p.action === "create") return jsonResult(await store.create(sessionId));
-				return jsonResult(
-					await store.update(sessionId, (state) => {
-						if (p.action === "set_stage") {
-							if (!p.stage) throw new Error("stage is required");
-							state.stage = p.stage;
-						} else {
-							if (!p.skill_name || !p.problem) throw new Error("skill_name and problem are required");
-							state.goal = {
-								skillName: p.skill_name,
-								skillKey: p.skill_key,
-								problem: p.problem,
-								inputs: p.inputs ?? [],
-								outputs: p.outputs ?? [],
-								roughProcess: p.rough_process ?? [],
-							};
-							state.stage = "running";
-						}
-					}),
-				);
+				if (p.action === "get") return jsonResult(stateResponse(await store.get(sessionId), p.detail as ResponseDetail));
+				if (p.action === "create") return jsonResult(stateResponse(await store.create(sessionId), p.detail as ResponseDetail));
+				const updated = await store.update(sessionId, (state) => {
+					if (p.action === "set_stage") {
+						if (!p.stage) throw new Error("stage is required");
+						state.stage = p.stage;
+					} else {
+						if (!p.skill_name || !p.problem) throw new Error("skill_name and problem are required");
+						state.goal = {
+							skillName: p.skill_name,
+							skillKey: p.skill_key,
+							problem: p.problem,
+							inputs: p.inputs ?? [],
+							outputs: p.outputs ?? [],
+							roughProcess: p.rough_process ?? [],
+						};
+						state.stage = "running";
+					}
+				});
+				return jsonResult(mutationResponse(updated, p.action, "session"));
 			} catch (error) {
 				return errorResult(error);
 			}
@@ -79,21 +81,23 @@ export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): v
 			accepted: Type.Optional(Type.Boolean()),
 			notes: Type.Optional(Type.String()),
 			confirmed_by_user: Type.Optional(Type.Boolean()),
+			detail: OptionalResponseDetail,
 		}),
 		async execute(_id, params, _signal, _update, ctx) {
 			const p = params as any;
 			const sessionId = ctx.sessionManager.getSessionId();
 			try {
 				const state = await store.create(sessionId);
-				if (p.action === "list") return jsonResult(state.cases);
-				return jsonResult(
-					await store.update(sessionId, (draft) => {
+				if (p.action === "list") return jsonResult(listResponse(state.cases, p.detail as ResponseDetail, "case"));
+				let changedId = p.case_id as string | undefined;
+				const updated = await store.update(sessionId, (draft) => {
 						const now = new Date().toISOString();
 						if (p.action === "add") {
 							if (!p.name || p.input === undefined) throw new Error("name and input are required");
 							if (p.accepted === true && p.confirmed_by_user !== true)
 								throw new Error("accepted=true requires confirmed_by_user=true");
 							const id = p.case_id || nextId(draft, "CASE");
+							changedId = id;
 							if (draft.cases.some((entry) => entry.id === id)) throw new Error(`Duplicate case ID: ${id}`);
 							draft.cases.push({
 								id,
@@ -121,8 +125,8 @@ export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): v
 							if (p.notes !== undefined) item.notes = p.notes;
 							item.updatedAt = now;
 						}
-					}),
-				);
+					});
+				return jsonResult(mutationResponse(updated, p.action, "case", updated.cases.find((item) => item.id === changedId)));
 			} catch (error) {
 				return errorResult(error);
 			}
@@ -144,6 +148,7 @@ export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): v
 			]),
 			id: Type.Optional(Type.String()),
 			value: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
+			detail: OptionalResponseDetail,
 		}),
 		async execute(_id, params, _signal, _update, ctx) {
 			const p = params as any;
@@ -151,15 +156,16 @@ export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): v
 			try {
 				const state = await store.create(sessionId);
 				const collection = collectionFor(state, p.entity);
-				if (p.action === "list") return jsonResult(collection);
+				if (p.action === "list") return jsonResult(listResponse(collection, p.detail as ResponseDetail, p.entity));
 				if (!p.id && p.action !== "add") throw new Error("id is required");
-				return jsonResult(
-					await store.update(sessionId, (draft) => {
+				let changedId = p.id as string | undefined;
+				const updated = await store.update(sessionId, (draft) => {
 						const target = collectionFor(draft, p.entity) as any[];
 						if (p.action === "add") {
 							if (!p.value) throw new Error("value is required");
 							const prefix = p.entity === "step" ? "STEP" : p.entity === "decision" ? "DECISION" : "DATA";
 							const id = p.id || nextId(draft, prefix);
+							changedId = id;
 							if (target.some((item) => item.id === id)) throw new Error(`Duplicate ${p.entity} ID: ${id}`);
 							target.push(normalizeEntity(p.entity, { ...p.value, id }, target.length));
 							return;
@@ -173,8 +179,9 @@ export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): v
 								{ ...target[index], ...(p.value ?? {}), id: p.id },
 								index,
 							);
-					}),
-				);
+					});
+				const changed = collectionFor(updated, p.entity).find((item) => item.id === changedId);
+				return jsonResult(mutationResponse(updated, p.action, p.entity, changed));
 			} catch (error) {
 				return errorResult(error);
 			}
@@ -204,19 +211,21 @@ export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): v
 			reason: Type.Optional(Type.String()),
 			affected: OptionalStringArray,
 			confirmed_by_user: Type.Optional(Type.Boolean()),
+			detail: OptionalResponseDetail,
 		}),
 		async execute(_id, params, _signal, _update, ctx) {
 			const p = params as any;
 			const sessionId = ctx.sessionManager.getSessionId();
 			try {
 				const state = await store.create(sessionId);
-				if (p.action === "list") return jsonResult(state.corrections);
+				if (p.action === "list") return jsonResult(listResponse(state.corrections, p.detail as ResponseDetail, "correction"));
 				if (!p.target_type || !p.reason_type || !p.reason)
 					throw new Error("target_type, reason_type and reason are required");
-				return jsonResult(
-					await store.update(sessionId, (draft) => {
+				let changedId: string | undefined;
+				const updated = await store.update(sessionId, (draft) => {
+						changedId = nextId(draft, "CORRECTION");
 						draft.corrections.push({
-							id: nextId(draft, "CORRECTION"),
+							id: changedId,
 							targetType: p.target_type,
 							targetId: p.target_id,
 							oldValue: p.old_value,
@@ -227,8 +236,8 @@ export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): v
 							confirmedByUser: p.confirmed_by_user === true,
 							createdAt: new Date().toISOString(),
 						});
-					}),
-				);
+					});
+				return jsonResult(mutationResponse(updated, p.action, "correction", updated.corrections.find((item) => item.id === changedId)));
 			} catch (error) {
 				return errorResult(error);
 			}
@@ -263,6 +272,7 @@ export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): v
 			conditions: OptionalStringArray,
 			exceptions: OptionalStringArray,
 			on_missing: Type.Optional(Type.String()),
+			detail: OptionalResponseDetail,
 		}),
 		async execute(_id, params, _signal, _update, ctx) {
 			const p = params as any;
@@ -273,7 +283,7 @@ export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): v
 					(item) =>
 						item.status === "model_prior" || item.status === "model_candidate" || item.status === "pending",
 				);
-				if (p.action === "list") return jsonResult(priors);
+				if (p.action === "list") return jsonResult(listResponse(priors, p.detail as ResponseDetail, "data"));
 				if (p.action === "summary")
 					return jsonResult({
 						totalData: state.data.length,
@@ -285,8 +295,7 @@ export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): v
 							usedIn: item.usedIn,
 						})),
 					});
-				return jsonResult(
-					await store.update(sessionId, (draft) => {
+				const updated = await store.update(sessionId, (draft) => {
 						const item = draft.data.find((entry) => entry.id === p.data_id);
 						if (!item) throw new Error(`Unknown data item: ${p.data_id}`);
 						if (!p.status) throw new Error("status is required");
@@ -303,8 +312,8 @@ export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): v
 						if (p.conditions !== undefined) item.conditions = p.conditions;
 						if (p.exceptions !== undefined) item.exceptions = p.exceptions;
 						if (p.on_missing !== undefined) item.onMissing = p.on_missing;
-					}),
-				);
+					});
+				return jsonResult(mutationResponse(updated, p.action, "data", updated.data.find((item) => item.id === p.data_id)));
 			} catch (error) {
 				return errorResult(error);
 			}
@@ -349,21 +358,23 @@ export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): v
 			install_source: Type.Optional(Type.String()),
 			success_check: Type.Optional(Type.String()),
 			failure_handling: Type.Optional(Type.String()),
+			detail: OptionalResponseDetail,
 		}),
 		async execute(_id, params, _signal, _update, ctx) {
 			const p = params as any;
 			const sessionId = ctx.sessionManager.getSessionId();
 			try {
 				const state = await store.create(sessionId);
-				if (p.action === "list") return jsonResult(state.tools);
+				if (p.action === "list") return jsonResult(listResponse(state.tools, p.detail as ResponseDetail, "tool"));
 				const discovered = p.name ? pi.getAllTools().find((tool) => tool.name === p.name) : undefined;
 				const discoveredPath = discovered?.sourceInfo?.path;
 				const schemaHash = p.input_schema_hash ?? (discovered ? structureHash(discovered.parameters) : undefined);
-				return jsonResult(
-					await store.update(sessionId, (draft) => {
+				let changedId = p.tool_id as string | undefined;
+				const updated = await store.update(sessionId, (draft) => {
 						if (p.action === "add") {
 							if (!p.name) throw new Error("name is required");
 							const id = p.tool_id || nextId(draft, "TOOL");
+							changedId = id;
 							if (draft.tools.some((entry) => entry.id === id)) throw new Error(`Duplicate tool ID: ${id}`);
 							draft.tools.push({
 								id,
@@ -414,8 +425,8 @@ export function registerTrainingTools(pi: ExtensionAPI, store: TrainingStore): v
 								}),
 							);
 						}
-					}),
-				);
+					});
+				return jsonResult(mutationResponse(updated, p.action, "tool", updated.tools.find((item) => item.id === changedId)));
 			} catch (error) {
 				return errorResult(error);
 			}

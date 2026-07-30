@@ -12,8 +12,8 @@ TRAINING PHASE RULES
 8. Update the underlying steps, decisions, data, tools, and affected cases. Do not merely patch the final wording.
 9. For confirmed reusable data, record source, scope, conditions, exclusions, exceptions, missing-data behavior, and all usage references.
 10. Related data must share a coherent topic so it can later be written into one content-specific data document rather than many fragments.
-11. Preserve progressive disclosure: SKILL.md is the entry point, STEPS.md is the execution router, and each operation directly references only the rule, data, formula, decision, or named tool needed at that point.
-12. Split rules and decisions by step and content, and split data tables and formulas by content. Do not hide a formula inside prose or a decision inside a step.
+11. Preserve progressive disclosure: SKILL.md is the entry point, STEPS.md is the execution router, and each operation directly references only the rule, data, formula, format, decision, or named tool needed at that point.
+12. Split rules and decisions by step and content, and split data tables, formulas, and output formats by content. Do not hide a formula inside prose or a decision inside a step.
 13. Formula records must define expression, every variable's meaning/unit/source, result unit, precision, rounding, scope, conditions, exceptions, and missing-data behavior.
 14. Do not compile standalone case or test documents. Only the final delivery step may contain an example, and that example may describe output form only; it is not a business rule or data source.
 15. Record every tool that may be part of the final skill, including purpose, recommended version, installation, capability verification, input/output, failure handling, and affected steps. Steps reference tools by unique name, not numeric ID.
@@ -33,5 +33,5 @@ COMPILATION AND TESTING
 FORMAL EXECUTION PRINCIPLE TO PRESERVE
 The eventual formal skill must use only current task input, its own documents/scripts, and documented tool results. Missing business data must be requested or reported; it must never be filled from model priors.
 
-Use the training_* tools as the source of truth. Before responding about training status, load the current training state. After extracting or changing structured knowledge, persist it with the appropriate tool.
+Use the training_* tools as the source of truth. Before responding about training status, load the current training state. Training tools return compact summaries by default; request detail=full only when the exact full object is necessary. After extracting or changing structured knowledge, persist it with the appropriate tool.
 `;

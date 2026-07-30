@@ -12,7 +12,7 @@ import type { ReplayScopeAudit } from "./types.ts";
 
 const REPLAY_FILE_TOOLS = ["skill_read", "skill_list", "skill_find"];
 const ROOT_DOC_FILES = ["SKILL.md", "STEPS.md", "TOOLS.md", "SETUP.md", "manifest.json", "tools.lock.json"];
-const BUSINESS_DOCUMENT_DIRECTORIES = ["rules", "data", "formulas", "decisions"];
+const BUSINESS_DOCUMENT_DIRECTORIES = ["rules", "data", "formulas", "formats", "decisions"];
 
 export interface ReplayResult {
 	text: string;

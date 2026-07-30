@@ -58,7 +58,7 @@ export async function validateCompiledSkillSelfContainment(root: string): Promis
 		reachable.add(document);
 		for (const linked of linksByDocument.get(document) ?? []) if (!reachable.has(linked)) queue.push(linked);
 	}
-	for (const document of documents.filter((path) => /^(?:rules|data|formulas|decisions)\//.test(path))) {
+	for (const document of documents.filter((path) => /^(?:rules|data|formulas|formats|decisions)\//.test(path))) {
 		if (!reachable.has(document)) warnings.push(`${document} 未从 SKILL.md 的渐进式引用链到达`);
 	}
 	return {

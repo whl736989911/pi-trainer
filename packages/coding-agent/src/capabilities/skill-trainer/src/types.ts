@@ -1,3 +1,5 @@
+import type { SkillSelfContainmentReport } from "./scope-audit.ts";
+
 export type TrainingStage = "defining" | "running" | "reviewing" | "systematizing";
 export type DraftStatus = "candidate" | "confirmed" | "modified" | "removed";
 export type DataStatus =
@@ -42,6 +44,7 @@ export interface SkillStepDraft {
 	instruction: string;
 	toolRefs: string[];
 	outputs: string[];
+	outputExample?: unknown;
 	doneWhen: string[];
 	onFailure: string;
 	status: DraftStatus;
@@ -120,6 +123,15 @@ export interface ConfirmationEvidence {
 	confirmedAt: string;
 }
 
+export interface ReplayScopeAudit {
+	valid: boolean;
+	selfContainment: SkillSelfContainmentReport;
+	reportedDocuments: string[];
+	reportedTools: string[];
+	outsideSkillContent: string[];
+	violations: string[];
+}
+
 export interface TrainingTest {
 	id: string;
 	type: "replay" | "boundary";
@@ -129,6 +141,7 @@ export interface TrainingTest {
 	actualResult?: string;
 	activeTools?: string[];
 	accessLog?: Array<{ timestamp: string; tool: string; path: string; allowed: boolean; error?: string }>;
+	scopeAudit?: ReplayScopeAudit;
 	status:
 		| "draft"
 		| "queued"

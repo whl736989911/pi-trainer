@@ -4,27 +4,27 @@ import { resolve } from "node:path";
 import { validateClosure } from "./compiler.ts";
 import { trainingDefinitionHash } from "./fingerprint.ts";
 import { verifyReplayResourceIsolation } from "./replay-resource-loader.ts";
+import { type SkillSelfContainmentReport, validateCompiledSkillSelfContainment } from "./scope-audit.ts";
 import type { TrainingState } from "./types.ts";
 
 export interface ValidationReport {
 	closure: ReturnType<typeof validateClosure>;
 	artifactFiles: { valid: boolean; missing: string[] };
+	selfContainment?: SkillSelfContainmentReport;
 	replayResources?: Record<string, number | boolean>;
 	cleanEnvironment?: { valid: boolean; engine: string; output: string };
 }
 
 const REQUIRED_FILES = [
 	"SKILL.md",
-	"SETUP.md",
-	"TOOLS.md",
-	"DATA.md",
-	"RULES.md",
-	"FORMULAS.md",
 	"STEPS.md",
-	"DECISIONS.md",
-	"EXAMPLES.md",
-	"TESTS.md",
+	"TOOLS.md",
+	"SETUP.md",
+	"tools.lock.json",
+	"manifest.json",
+	"scripts/setup.ps1",
 	"scripts/setup.sh",
+	"scripts/validate.ps1",
 	"scripts/validate.sh",
 ];
 
@@ -38,9 +38,14 @@ export async function validateSkill(state: TrainingState, cleanEnvironment: bool
 		? REQUIRED_FILES.filter((file) => !existsSync(resolve(artifactPath, file)))
 		: [...REQUIRED_FILES];
 	const report: ValidationReport = { closure, artifactFiles: { valid: missing.length === 0, missing } };
-	if (artifactPath && missing.length === 0) report.replayResources = await verifyReplayResourceIsolation(artifactPath);
+	if (artifactPath && missing.length === 0) {
+		report.selfContainment = await validateCompiledSkillSelfContainment(artifactPath);
+		report.replayResources = await verifyReplayResourceIsolation(artifactPath);
+	}
 	if (cleanEnvironment) {
 		if (!artifactPath || missing.length) throw new Error("必须先成功编译技能，才能执行干净环境验证");
+		if (!report.selfContainment?.valid)
+			throw new Error(`技能自包含检查失败：${report.selfContainment?.violations.join("；") || "未知错误"}`);
 		report.cleanEnvironment = await runSandbox(artifactPath);
 	}
 	return report;

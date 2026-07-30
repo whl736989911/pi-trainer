@@ -455,6 +455,7 @@ function normalizeEntity(entity: string, value: any, index: number): any {
 			instruction: text(value.instruction ?? "", "step.instruction"),
 			toolRefs: strings(value.tool_refs ?? value.toolRefs ?? [], "step.toolRefs"),
 			outputs: strings(value.outputs ?? [], "step.outputs"),
+			outputExample: value.output_example ?? value.outputExample,
 			doneWhen: strings(value.done_when ?? value.doneWhen ?? [], "step.doneWhen"),
 			onFailure: text(value.on_failure ?? value.onFailure ?? "", "step.onFailure"),
 			status,

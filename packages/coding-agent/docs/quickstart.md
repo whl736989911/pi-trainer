@@ -64,7 +64,7 @@ Useful commands:
 /knowledge-status
 ```
 
-The final Skill contains separate `DATA.md`, `RULES.md`, `FORMULAS.md`, `STEPS.md` and `DECISIONS.md` documents. The Agent will not confirm their business correctness on the user's behalf.
+The final Skill uses progressive disclosure: `SKILL.md` points to `STEPS.md`; each operation then links only the required `rules/`, `data/`, `formulas/`, `decisions/`, or named entry in `TOOLS.md`. Standalone case and test documents are not compiled into the Skill. Compilation rejects local document links that are missing or leave the Skill directory. Replay cross-checks a machine-readable source declaration against actual restricted file reads and declared tool calls; scope violations make the test error instead of proceeding to user review. The Agent will not confirm business correctness on the user's behalf.
 
 ## Configure Feishu/Lark
 

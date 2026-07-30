@@ -1,31 +1,24 @@
 import type { Dirent } from "node:fs";
+import { existsSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import { createAgentSession } from "../../../core/sdk.ts";
 import { SessionManager } from "../../../core/session-manager.ts";
 import { structureHash } from "./fingerprint.ts";
 import { createReplayFileTools, type ReplayAccessLog } from "./replay-file-tools.ts";
 import { createReplayResources } from "./replay-resource-loader.ts";
+import { type SkillSelfContainmentReport, validateCompiledSkillSelfContainment } from "./scope-audit.ts";
+import type { ReplayScopeAudit } from "./types.ts";
 
-const ROOT_DOC_FILES = [
-	"SKILL.md",
-	"SETUP.md",
-	"TOOLS.md",
-	"DATA.md",
-	"RULES.md",
-	"FORMULAS.md",
-	"STEPS.md",
-	"DECISIONS.md",
-	"EXAMPLES.md",
-	"TESTS.md",
-	"manifest.json",
-	"tools.lock.json",
-];
+const REPLAY_FILE_TOOLS = ["skill_read", "skill_list", "skill_find"];
+const ROOT_DOC_FILES = ["SKILL.md", "STEPS.md", "TOOLS.md", "SETUP.md", "manifest.json", "tools.lock.json"];
+const BUSINESS_DOCUMENT_DIRECTORIES = ["rules", "data", "formulas", "decisions"];
 
 export interface ReplayResult {
 	text: string;
 	activeTools: string[];
 	accessLog: ReplayAccessLog[];
+	scopeAudit: ReplayScopeAudit;
 }
 
 export async function runReplay(
@@ -36,14 +29,17 @@ export async function runReplay(
 	timeoutMs = 300_000,
 	providerExtensionPaths: string[] = [],
 ): Promise<ReplayResult> {
-	const docs = await loadDocs(artifactPath);
+	const selfContainment = await validateCompiledSkillSelfContainment(artifactPath);
+	if (!selfContainment.valid)
+		throw new Error(`Compiled skill is not self-contained: ${selfContainment.violations.join("; ")}`);
+	const entryDocument = await loadEntryDocument(artifactPath);
 	const resources = await createReplayResources(artifactPath, providerExtensionPaths);
 	let session: Awaited<ReturnType<typeof createAgentSession>>["session"] | undefined;
 	let text = "";
 	const accessLog: ReplayAccessLog[] = [];
 	let unsubscribe: (() => void) | undefined;
 	try {
-		const declared = [...new Set(declaredTools)];
+		const declared = [...new Set([...REPLAY_FILE_TOOLS, ...declaredTools])];
 		const replayFileTools = createReplayFileTools(artifactPath, resources.inputRoot, accessLog).filter((tool) =>
 			declared.includes(tool.name),
 		);
@@ -73,9 +69,11 @@ export async function runReplay(
 				});
 			}
 		});
-		const prompt = `# COMPILED SKILL DOCUMENTS\n${docs}\n\n# TEST INPUT\n${format(input)}\n\nExecute the compiled skill. Explicitly cite compiled data/document identifiers and report missing data instead of guessing.`;
+		const prompt = `# COMPILED SKILL ENTRY DOCUMENT\n${entryDocument}\n\n# TEST INPUT\n${format(input)}\n\nExecute the compiled skill using progressive disclosure. Start with SKILL.md, then use skill_read to read STEPS.md, and only read documents directly referenced by the current operation. Cite the document names used and report missing data instead of guessing. At the very end, append this machine-readable declaration with the actual compiled document paths and declared tools whose returned content you used:\n<!-- SKILL_SCOPE_USAGE\n{"documents":["SKILL.md","STEPS.md"],"tools":[],"outsideSkillContent":[]}\n-->\nDo not list a document or tool unless you actually used its content. If you used any fact or content outside the current input, compiled skill, or declared tool results, list it in outsideSkillContent.`;
 		await promptWithDeadline(session, prompt, signal, timeoutMs);
-		return { text: text.trim(), activeTools: [...activeToolNames], accessLog };
+		const parsed = parseScopeUsage(text);
+		const scopeAudit = auditReplayScope(artifactPath, parsed.usage, accessLog, declaredTools, selfContainment);
+		return { text: parsed.text, activeTools: [...activeToolNames], accessLog, scopeAudit };
 	} finally {
 		unsubscribe?.();
 		session?.dispose();
@@ -87,7 +85,7 @@ export async function proposeBoundaryCases(
 	artifactPath: string,
 	count: number,
 ): Promise<Array<{ name: string; input: unknown; expectedChecks: string[] }>> {
-	const docs = await loadDocs(artifactPath);
+	const docs = await loadAllDocs(artifactPath);
 	const resources = await createReplayResources(artifactPath);
 	let session: Awaited<ReturnType<typeof createAgentSession>>["session"] | undefined;
 	let text = "";
@@ -119,11 +117,18 @@ export async function proposeBoundaryCases(
 	}
 }
 
-async function loadDocs(root: string): Promise<string> {
-	const relativeFiles = [
-		...ROOT_DOC_FILES,
-		...(await listMarkdownFiles(resolve(root, "data"))).map((file) => `data/${file}`),
-	];
+async function loadEntryDocument(root: string): Promise<string> {
+	try {
+		return `## FILE: SKILL.md\n${await readFile(resolve(root, "SKILL.md"), "utf8")}`;
+	} catch {
+		throw new Error("Compiled skill contains no readable SKILL.md entry document");
+	}
+}
+
+async function loadAllDocs(root: string): Promise<string> {
+	const relativeFiles = [...ROOT_DOC_FILES];
+	for (const directory of BUSINESS_DOCUMENT_DIRECTORIES)
+		relativeFiles.push(...(await listMarkdownFiles(resolve(root, directory))).map((file) => `${directory}/${file}`));
 	const chunks: string[] = [];
 	for (const name of relativeFiles) {
 		try {
@@ -134,6 +139,107 @@ async function loadDocs(root: string): Promise<string> {
 	}
 	if (!chunks.length) throw new Error("Compiled skill contains no readable documents");
 	return chunks.join("\n");
+}
+
+interface ScopeUsage {
+	documents: string[];
+	tools: string[];
+	outsideSkillContent: string[];
+}
+
+function parseScopeUsage(text: string): { text: string; usage?: ScopeUsage } {
+	const pattern = /<!--\s*SKILL_SCOPE_USAGE\s*([\s\S]*?)-->/i;
+	const match = text.match(pattern);
+	if (!match?.[1]) return { text: text.trim() };
+	try {
+		const parsed: unknown = JSON.parse(match[1].trim());
+		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+			return { text: text.replace(pattern, "").trim() };
+		const record = parsed as Record<string, unknown>;
+		if (![record.documents, record.tools, record.outsideSkillContent].every(isStringArray))
+			return { text: text.replace(pattern, "").trim() };
+		return {
+			text: text.replace(pattern, "").trim(),
+			usage: {
+				documents: record.documents as string[],
+				tools: record.tools as string[],
+				outsideSkillContent: record.outsideSkillContent as string[],
+			},
+		};
+	} catch {
+		return { text: text.replace(pattern, "").trim() };
+	}
+}
+
+function auditReplayScope(
+	artifactPath: string,
+	usage: ScopeUsage | undefined,
+	accessLog: ReplayAccessLog[],
+	declaredTools: string[],
+	selfContainment: SkillSelfContainmentReport,
+): ReplayScopeAudit {
+	const violations: string[] = [];
+	if (!usage) violations.push("回放结果缺少有效的 SKILL_SCOPE_USAGE 声明");
+	const reportedDocuments = [...new Set(usage?.documents ?? [])];
+	const reportedTools = [...new Set(usage?.tools ?? [])];
+	const outsideSkillContent = [...new Set(usage?.outsideSkillContent ?? [])];
+	if (outsideSkillContent.length)
+		violations.push(`回放声明使用了技能范围之外的内容：${outsideSkillContent.join("；")}`);
+	for (const entry of accessLog.filter((item) => !item.allowed))
+		violations.push(`受限访问失败或越界：${entry.tool} ${entry.path}${entry.error ? ` (${entry.error})` : ""}`);
+	const actualDocuments = new Set(
+		accessLog
+			.filter((item) => item.allowed && item.tool === "skill_read")
+			.map((item) => normalizeSkillDocumentPath(artifactPath, item.path))
+			.filter((path): path is string => path !== undefined),
+	);
+	for (const document of reportedDocuments) {
+		const normalized = normalizeSkillDocumentPath(artifactPath, document);
+		if (!normalized) {
+			violations.push(`来源声明包含技能目录之外或不存在的文档：${document}`);
+			continue;
+		}
+		if (normalized !== "SKILL.md" && !actualDocuments.has(normalized))
+			violations.push(`来源声明中的文档未通过 skill_read 实际读取：${normalized}`);
+	}
+	for (const document of actualDocuments)
+		if (!reportedDocuments.some((item) => normalizeSkillDocumentPath(artifactPath, item) === document))
+			violations.push(`实际读取的文档未在来源声明中列出：${document}`);
+	if (!actualDocuments.has("STEPS.md")) violations.push("回放未按渐进式入口读取 STEPS.md");
+	const actualTools = new Set(
+		accessLog.filter((item) => item.allowed && !item.tool.startsWith("skill_")).map((item) => item.tool),
+	);
+	for (const tool of actualTools) {
+		if (!declaredTools.includes(tool)) violations.push(`调用了未声明工具：${tool}`);
+		if (!reportedTools.includes(tool)) violations.push(`实际调用的工具未在来源声明中列出：${tool}`);
+	}
+	for (const tool of reportedTools) {
+		if (!declaredTools.includes(tool)) violations.push(`来源声明包含未声明工具：${tool}`);
+		else if (!actualTools.has(tool)) violations.push(`来源声明中的工具未实际调用：${tool}`);
+	}
+	return {
+		valid: violations.length === 0,
+		selfContainment,
+		reportedDocuments,
+		reportedTools,
+		outsideSkillContent,
+		violations: [...new Set(violations)],
+	};
+}
+
+function normalizeSkillDocumentPath(artifactPath: string, requested: string): string | undefined {
+	if (!requested || requested.startsWith("input/") || isAbsolute(requested) || /^[a-z]:[\\/]/i.test(requested))
+		return undefined;
+	const normalizedRequest = requested.startsWith("skill/") ? requested.slice(6) : requested;
+	const candidate = resolve(artifactPath, normalizedRequest);
+	const root = resolve(artifactPath);
+	if (!(candidate === root || candidate.startsWith(`${root}${sep}`)) || !existsSync(candidate)) return undefined;
+	const path = relative(root, candidate).replaceAll("\\", "/");
+	return /\.md$/i.test(path) ? path : undefined;
+}
+
+function isStringArray(value: unknown): value is string[] {
+	return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
 async function listMarkdownFiles(directory: string, prefix = ""): Promise<string[]> {

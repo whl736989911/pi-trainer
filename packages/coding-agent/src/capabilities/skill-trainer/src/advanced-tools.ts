@@ -12,7 +12,7 @@ export function registerAdvancedTrainingTools(pi: ExtensionAPI, store: TrainingS
 		name: "training_compile",
 		label: "Compile Trained Skill",
 		description:
-			"执行数据闭包检查，并将训练状态编译为自包含技能目录（Markdown、主题数据、工具依赖和安装/验证脚本）。",
+			"执行数据闭包检查，并将训练状态编译为渐进式披露的自包含技能目录（步骤路由、按内容拆分的业务文档、工具依赖和安装/验证脚本）。",
 		parameters: Type.Object({
 			action: Type.Union([Type.Literal("closure"), Type.Literal("compile")]),
 			allow_draft: Type.Optional(Type.Boolean({ description: "仅用于预览。正式编译必须为 false。" })),
@@ -121,7 +121,10 @@ export function registerAdvancedTrainingTools(pi: ExtensionAPI, store: TrainingS
 					item.actualResult = replay.text;
 					item.activeTools = replay.activeTools;
 					item.accessLog = replay.accessLog;
-					item.status = "pending_user_review";
+					item.scopeAudit = replay.scopeAudit;
+					item.status = replay.scopeAudit.valid ? "pending_user_review" : "error";
+					if (!replay.scopeAudit.valid)
+						item.userComment = `技能使用范围检查失败：${replay.scopeAudit.violations.join("；")}`;
 					item.updatedAt = new Date().toISOString();
 				});
 				return jsonResult(updated.tests.find((item) => item.id === p.test_id));
@@ -188,7 +191,10 @@ export function registerAdvancedTrainingTools(pi: ExtensionAPI, store: TrainingS
 					item.actualResult = replay.text;
 					item.activeTools = replay.activeTools;
 					item.accessLog = replay.accessLog;
-					item.status = "pending_user_review";
+					item.scopeAudit = replay.scopeAudit;
+					item.status = replay.scopeAudit.valid ? "pending_user_review" : "error";
+					if (!replay.scopeAudit.valid)
+						item.userComment = `技能使用范围检查失败：${replay.scopeAudit.violations.join("；")}`;
 					item.updatedAt = new Date().toISOString();
 				});
 				return jsonResult(state.tests.find((item) => item.id === p.test_id));

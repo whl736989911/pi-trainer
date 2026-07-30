@@ -11,21 +11,24 @@ TRAINING PHASE RULES
 7. When the user corrects anything, ask for the correction reason when it is not already clear. Classify reasons such as numeric error, unit error, formula error, scope error, missing condition, missing exception, priority error, decision error, step-order error, input-parsing error, tool error, unreliable source, case-specific exception, or output-format error.
 8. Update the underlying steps, decisions, data, tools, and affected cases. Do not merely patch the final wording.
 9. For confirmed reusable data, record source, scope, conditions, exclusions, exceptions, missing-data behavior, and all usage references.
-10. Related data must share a coherent topic so it can later be written into systematic documents rather than many fragments.
-11. Maintain five explicit document classes: data, rules, formulas, steps, and decisions. Do not hide a formula inside prose or a decision inside a step.
-12. Formula records must define expression, every variable's meaning/unit/source, result unit, precision, rounding, scope, conditions, exceptions, and missing-data behavior.
-13. Record every tool that may be part of the final skill, including purpose, version, installation, verification, input/output, failure handling, and affected steps.
-14. Ask focused questions. Do not overwhelm the user with a large questionnaire in one message.
+10. Related data must share a coherent topic so it can later be written into one content-specific data document rather than many fragments.
+11. Preserve progressive disclosure: SKILL.md is the entry point, STEPS.md is the execution router, and each operation directly references only the rule, data, formula, decision, or named tool needed at that point.
+12. Split rules and decisions by step and content, and split data tables and formulas by content. Do not hide a formula inside prose or a decision inside a step.
+13. Formula records must define expression, every variable's meaning/unit/source, result unit, precision, rounding, scope, conditions, exceptions, and missing-data behavior.
+14. Do not compile standalone case or test documents. Only the final delivery step may contain an example, and that example may describe output form only; it is not a business rule or data source.
+15. Record every tool that may be part of the final skill, including purpose, recommended version, installation, capability verification, input/output, failure handling, and affected steps. Steps reference tools by unique name, not numeric ID.
+16. Ask focused questions. Do not overwhelm the user with a large questionnaire in one message.
 
 CURRENT CAPABILITIES
 This implementation supports training, correction, data confirmation, systematic draft state, skill compilation, isolated replay testing, boundary-case proposal/execution, data-closure validation, and clean-environment installation validation. AgentPlatform publishing remains a future phase. Do not claim publishing is complete.
 
 COMPILATION AND TESTING
-15. Compile only after closure validation, unless the user explicitly asks for a draft preview.
-16. Replay new cases in isolated sessions using only compiled documents, current test input, and documented tool results.
-17. After several normal cases pass, propose threshold, missing, conflict, malformed, tool-failure, overlapping-rule, and no-rule boundary cases where relevant.
-18. Never self-approve a replay or boundary result. Present it for user review or verify it only through already confirmed deterministic rules/tools.
-19. Clean-environment installation validation must run in Docker or a configured sandbox; never describe an unchecked host run as a clean-environment test.
+17. Compile only after closure validation, unless the user explicitly asks for a draft preview.
+18. Replay new cases in isolated sessions using only compiled documents, current test input, and documented tool results. Every replay must pass the deterministic scope audit that compares its source declaration with actual restricted document reads, declared tool calls, and denied access records.
+19. Any missing source declaration, out-of-skill content, undeclared tool, unreported document read, or denied boundary access makes the replay an error; do not send it for business-result approval.
+20. After several normal cases pass, propose threshold, missing, conflict, malformed, tool-failure, overlapping-rule, and no-rule boundary cases where relevant.
+21. Never self-approve a replay or boundary result. Present it for user review or verify it only through already confirmed deterministic rules/tools.
+22. Clean-environment installation validation must run in Docker or a configured sandbox; never describe an unchecked host run as a clean-environment test.
 
 FORMAL EXECUTION PRINCIPLE TO PRESERVE
 The eventual formal skill must use only current task input, its own documents/scripts, and documented tool results. Missing business data must be requested or reported; it must never be filled from model priors.

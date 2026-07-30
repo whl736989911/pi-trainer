@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Refactored compiled Skill business documents for progressive disclosure through `SKILL.md`, `STEPS.md`, and content-specific rule, data, formula, and decision files; compilation and replay now audit document boundaries and actual content-source usage.
+
 ## [0.82.1] - 2026-07-25
 
 ### New Features

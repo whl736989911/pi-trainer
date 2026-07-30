@@ -2,7 +2,7 @@
 
 `packages/coding-agent` 是 Pi Trainer 的主 CLI 与 Agent 运行时。它保留上游 Pi 的终端、SDK、模型、Session 和扩展能力，并内置本项目的两项核心 Capability：
 
-- `capabilities/skill-trainer`：对话式 Skill 训练、知识归档、闭包检查、五类文档编译和隔离回放。
+- `capabilities/skill-trainer`：对话式 Skill 训练、知识归档、闭包检查、渐进式文档编译和隔离回放。
 - `capabilities/lark`：飞书/Lark WebSocket 网关、持久 Session、流式卡片、OAuth 和飞书工具。
 
 完整产品说明见仓库根目录的 [README.md](../../README.md)。
@@ -68,15 +68,17 @@ Skill Trainer 是隐藏的内置 Extension，会在终端和 Lark Session 中自
 
 ## 编译产物
 
-Skill Trainer 将已确认训练状态编译为自包含目录，核心文档包括：
+Skill Trainer 将已确认训练状态编译为自包含、渐进式披露的目录：
 
-- `DATA.md`
-- `RULES.md`
-- `FORMULAS.md`
-- `STEPS.md`
-- `DECISIONS.md`
+- `SKILL.md`：功能、输入、输出、文件结构和 `STEPS.md` 入口；
+- `STEPS.md`：在具体操作中直接引用依赖文档；
+- `rules/stepNN-*.md`：按步骤和内容拆分的规则；
+- `data/*.md`：按内容拆分的数据表；
+- `formulas/*.md`：按内容拆分的公式；
+- `decisions/stepNN-*.md`：按步骤和内容拆分的决策；
+- `TOOLS.md`：按唯一名称集中记录工具及推荐版本。
 
-并包含 `SKILL.md`、依赖说明、工具锁、案例、测试、主题数据和安装/验证脚本。
+正式 Skill 不包含独立案例或测试文档。安装说明、工具 Schema 记录和安装/验证脚本仍随产物生成。
 
 ## 正式回放边界
 
@@ -88,7 +90,7 @@ Skill Trainer 将已确认训练状态编译为自包含目录，核心文档包
 - 自动发现的 Extensions、Skills、Prompt 模板和设置；
 - 不受限的 `read`、`bash`、`edit`、`write`、`grep`、`find`、`ls`。
 
-文件访问使用 `skill_read`、`skill_list` 和 `skill_find`，并执行真实路径边界检查。外部工具必须在编译时记录稳定 Schema 哈希，回放时发生 Schema 漂移会停止执行。
+文件访问使用 `skill_read`、`skill_list` 和 `skill_find`，并执行真实路径边界检查。编译阶段检查文档引用是否存在或越出技能目录；每次回放将机器可读的来源声明与实际文档读取、工具调用和拒绝访问记录交叉核对。越界内容、未声明工具、未申报读取或缺少来源声明都会使测试进入错误状态。外部工具必须在编译时记录稳定 Schema 哈希，回放时发生 Schema 漂移会停止执行。
 
 ## 常用 Agent 功能
 

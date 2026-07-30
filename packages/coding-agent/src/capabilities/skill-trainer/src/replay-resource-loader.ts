@@ -81,11 +81,12 @@ export function formalReplaySystemPrompt(): string {
 	return `You are validating a compiled skill in a fresh training replay session.
 
 Use only:
-1. the compiled skill documents supplied in the current prompt;
-2. the current test input;
-3. results returned by tools explicitly declared by the compiled skill.
+1. the compiled SKILL.md entry document supplied in the current prompt;
+2. compiled documents read on demand with the restricted skill file tools;
+3. the current test input;
+4. results returned by tools explicitly declared by the compiled skill.
 
-Do not use training conversation history, global knowledge, context files, other skills, prompt templates, or model-derived business facts. If required business data is absent, follow the compiled missing-data rule or report the missing data. Do not guess. Every business rule, formula, parameter, and decisive fact used in the result must cite its compiled data or document identifier.`;
+Follow progressive disclosure: read STEPS.md after SKILL.md, then read only the documents directly referenced by the current operation. Do not use training conversation history, global knowledge, context files, other skills, prompt templates, or model-derived business facts. If required business data is absent, follow the compiled missing-data rule or report the missing data. Do not guess. Every business rule, formula, parameter, and decisive fact used in the result must cite its compiled document name.`;
 }
 
 function assertIsolatedResources(loader: ResourceLoader, allowedExtensionCount: number): void {

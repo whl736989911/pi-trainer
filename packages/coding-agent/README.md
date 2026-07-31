@@ -13,8 +13,7 @@
 
 ```bash
 npm install --ignore-scripts
-npm run hydrate:model-data
-npm run build
+npm run build:offline
 ```
 
 只构建当前包：

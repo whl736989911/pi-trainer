@@ -88,8 +88,7 @@ Pi Trainer 通过自然对话提取、澄清、修正并确认业务知识，最
 git clone https://github.com/whl736989911/pi-trainer.git
 cd pi-trainer
 npm install --ignore-scripts
-npm run hydrate:model-data
-npm run build
+npm run build:offline
 ```
 
 启动终端 Agent：
@@ -97,6 +96,8 @@ npm run build
 ```bash
 node packages/coding-agent/dist/cli.js
 ```
+
+仓库已提交经过校验的模型数据快照，因此首次安装不需要访问 `models.dev`。需要主动刷新模型目录时，网络可用后再运行 `npm run hydrate:model-data` 和 `npm run build`。
 
 开发期间也可以使用：
 
